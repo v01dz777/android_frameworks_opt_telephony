@@ -909,4 +909,13 @@ public abstract class BaseCommands implements CommandsInterface {
           mLceInfoRegistrant = null;
       }
     }
+
+    /**
+     * @hide
+     */
+    @Override
+    public int getLteOnGsmMode() {
+        return TelephonyManager.getLteOnGsmModeStatic();
+    }
+
 }
