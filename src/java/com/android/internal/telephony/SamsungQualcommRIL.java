@@ -293,6 +293,40 @@ public class SamsungQualcommRIL extends QualcommMSIM42RIL implements CommandsInt
     }
 
     @Override
+    protected RadioState getRadioStateFromInt(int stateInt) {
+        if(!oldRilState)
+            super.getRadioStateFromInt(stateInt);
+        RadioState state;
+
+        /* RIL_RadioState ril.h */
+        switch(stateInt) {
+            case 0: state = RadioState.RADIO_OFF; break;
+            case 1:
+            case 2: state = RadioState.RADIO_UNAVAILABLE; break;
+            case 4:
+                // When SIM is PIN-unlocked, RIL doesn't respond with RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED.
+                // We notify the system here.
+                Log.d(LOG_TAG, "SIM is PIN-unlocked now");
+                if (mIccStatusChangedRegistrants != null) {
+                    mIccStatusChangedRegistrants.notifyRegistrants();
+                }
+            case 3:
+            case 5:
+            case 6:
+            case 7:
+            case 8:
+            case 9:
+            case 10:
+            case 13: state = RadioState.RADIO_ON; break;
+
+            default:
+                throw new RuntimeException(
+                                           "Unrecognized RIL_RadioState: " + stateInt);
+        }
+        return state;
+    }
+
+    @Override
     public void setPhoneType(int phoneType){
         super.setPhoneType(phoneType);
         isGSM = (phoneType != RILConstants.CDMA_PHONE);
