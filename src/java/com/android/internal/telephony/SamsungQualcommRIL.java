@@ -1,6 +1,5 @@
 /*
  * Copyright (C) 2012-2013 The CyanogenMod Project
- * Copyright (C) 2013 The OmniROM Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +29,6 @@ import android.os.Parcel;
 import android.telephony.SmsMessage;
 import android.os.SystemProperties;
 import android.os.SystemClock;
-import android.provider.Settings;
 import android.text.TextUtils;
 import android.telephony.Rlog;
 
@@ -58,7 +56,7 @@ import com.android.internal.telephony.uicc.IccCardStatus;
  * Handles most GSM and CDMA cases.
  * {@hide}
  */
-public class SamsungQualcommRIL extends QualcommMSIM42RIL implements CommandsInterface {
+public class SamsungQualcommRIL extends RIL implements CommandsInterface {
 
     private AudioManager mAudioManager;
 
@@ -72,7 +70,6 @@ public class SamsungQualcommRIL extends QualcommMSIM42RIL implements CommandsInt
     private boolean oldRilState = needsOldRilFeature("exynos4RadioState");
     private boolean googleEditionSS = needsOldRilFeature("googleEditionSS");
     private boolean driverCall = needsOldRilFeature("newDriverCall");
-    private String[] lastKnownOfGood = {null, null, null};
     public SamsungQualcommRIL(Context context, int networkMode,
             int cdmaSubscription) {
         super(context, networkMode, cdmaSubscription);
@@ -98,11 +95,7 @@ public class SamsungQualcommRIL extends QualcommMSIM42RIL implements CommandsInt
             numApplications = IccCardStatus.CARD_MAX_APPS;
         }
         cardStatus.mApplications = new IccCardApplicationStatus[numApplications];
-        if (numApplications==1 && !isGSM){
-            cardStatus.mApplications = new IccCardApplicationStatus[numApplications+2];
-        }
 
-        appStatus = new IccCardApplicationStatus();
         for (int i = 0 ; i < numApplications ; i++) {
             appStatus = new IccCardApplicationStatus();
             appStatus.app_type       = appStatus.AppTypeFromRILInt(p.readInt());
@@ -119,30 +112,6 @@ public class SamsungQualcommRIL extends QualcommMSIM42RIL implements CommandsInt
             p.readInt(); // remaining_count_puk2 - puk2_num_retries
             p.readInt(); // - perso_unblock_retries
             cardStatus.mApplications[i] = appStatus;
-        }
-        if (numApplications==1 && !isGSM) {
-            cardStatus.mCdmaSubscriptionAppIndex = 1;
-            cardStatus.mImsSubscriptionAppIndex = 2;
-            IccCardApplicationStatus appStatus2 = new IccCardApplicationStatus();
-            appStatus2.app_type       = appStatus2.AppTypeFromRILInt(4); // csim state
-            appStatus2.app_state      = appStatus.app_state;
-            appStatus2.perso_substate = appStatus.perso_substate;
-            appStatus2.aid            = appStatus.aid;
-            appStatus2.app_label      = appStatus.app_label;
-            appStatus2.pin1_replaced  = appStatus.pin1_replaced;
-            appStatus2.pin1           = appStatus.pin1;
-            appStatus2.pin2           = appStatus.pin2;
-            cardStatus.mApplications[cardStatus.mCdmaSubscriptionAppIndex] = appStatus2;
-            IccCardApplicationStatus appStatus3 = new IccCardApplicationStatus();
-            appStatus3.app_type       = appStatus3.AppTypeFromRILInt(5); // ims state
-            appStatus3.app_state      = appStatus.app_state;
-            appStatus3.perso_substate = appStatus.perso_substate;
-            appStatus3.aid            = appStatus.aid;
-            appStatus3.app_label      = appStatus.app_label;
-            appStatus3.pin1_replaced  = appStatus.pin1_replaced;
-            appStatus3.pin1           = appStatus.pin1;
-            appStatus3.pin2           = appStatus.pin2;
-            cardStatus.mApplications[cardStatus.mImsSubscriptionAppIndex] = appStatus3;
         }
         return cardStatus;
     }
@@ -259,74 +228,6 @@ public class SamsungQualcommRIL extends QualcommMSIM42RIL implements CommandsInt
     }
 
     @Override
-    protected RadioState getRadioStateFromInt(int stateInt) {
-        if(!oldRilState)
-            super.getRadioStateFromInt(stateInt);
-        RadioState state;
-
-        /* RIL_RadioState ril.h */
-        switch(stateInt) {
-            case 0: state = RadioState.RADIO_OFF; break;
-            case 1:
-            case 2: state = RadioState.RADIO_UNAVAILABLE; break;
-            case 4:
-                // When SIM is PIN-unlocked, RIL doesn't respond with RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED.
-                // We notify the system here.
-                Log.d(LOG_TAG, "SIM is PIN-unlocked now");
-                if (mIccStatusChangedRegistrants != null) {
-                    mIccStatusChangedRegistrants.notifyRegistrants();
-                }
-            case 3:
-            case 5:
-            case 6:
-            case 7:
-            case 8:
-            case 9:
-            case 10:
-            case 13: state = RadioState.RADIO_ON; break;
-
-            default:
-                throw new RuntimeException(
-                                           "Unrecognized RIL_RadioState: " + stateInt);
-        }
-        return state;
-    }
-
-    @Override
-    protected RadioState getRadioStateFromInt(int stateInt) {
-        if(!oldRilState)
-            super.getRadioStateFromInt(stateInt);
-        RadioState state;
-
-        /* RIL_RadioState ril.h */
-        switch(stateInt) {
-            case 0: state = RadioState.RADIO_OFF; break;
-            case 1:
-            case 2: state = RadioState.RADIO_UNAVAILABLE; break;
-            case 4:
-                // When SIM is PIN-unlocked, RIL doesn't respond with RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED.
-                // We notify the system here.
-                Log.d(LOG_TAG, "SIM is PIN-unlocked now");
-                if (mIccStatusChangedRegistrants != null) {
-                    mIccStatusChangedRegistrants.notifyRegistrants();
-                }
-            case 3:
-            case 5:
-            case 6:
-            case 7:
-            case 8:
-            case 9:
-            case 10:
-            case 13: state = RadioState.RADIO_ON; break;
-
-            default:
-                throw new RuntimeException(
-                                           "Unrecognized RIL_RadioState: " + stateInt);
-        }
-        return state;
-    }
-
-    @Override
     public void setPhoneType(int phoneType){
         super.setPhoneType(phoneType);
         isGSM = (phoneType != RILConstants.CDMA_PHONE);
@@ -354,10 +255,6 @@ public class SamsungQualcommRIL extends QualcommMSIM42RIL implements CommandsInt
                 ret = responseInts(p);
                 setRadioPower(false, null);
                 setPreferredNetworkType(mPreferredNetworkType, null);
-                int cdmaSubscription = Settings.Global.getInt(mContext.getContentResolver(), Settings.Global.CDMA_SUBSCRIPTION_MODE, -1);
-                if(cdmaSubscription != -1) {
-                    setCdmaSubscriptionSource(mCdmaSubscription, null);
-                }
                 setCellInfoListRate(Integer.MAX_VALUE, null);
                 notifyRegistrantsRilConnectionChanged(((int[])ret)[0]);
                 break;
@@ -399,26 +296,8 @@ public class SamsungQualcommRIL extends QualcommMSIM42RIL implements CommandsInt
     }
 
     @Override
-    protected Object getOverridenRequestResponse(int mRequest, Parcel p) {
-        switch(mRequest) {
-            // prevent exceptions from happenimg because the null value is null or a hexadecimel. so convert if it is not null
-            case RIL_REQUEST_VOICE_REGISTRATION_STATE: return responseVoiceDataRegistrationState(p);
-            case RIL_REQUEST_DATA_REGISTRATION_STATE: return responseVoiceDataRegistrationState(p);
-            // this fixes bogus values the modem creates
-            // sometimes the  ril may print out
-            // (always on sprint)
-            // sprint: (empty,empty,31000)
-            // this problemaic on sprint, lte won't start, response is slow
-            //speeds up response time on eherpderpd/lte networks
-            case RIL_REQUEST_OPERATOR: return operatorCheck(p);
-            default: return null;
-        }
-    protected void
+    protected RILRequest
     processSolicited (Parcel p) {
-        if (isGSM){
-            super.processSolicited(p);
-            return;
-        }
         int serial, error;
         boolean found = false;
 
@@ -430,9 +309,9 @@ public class SamsungQualcommRIL extends QualcommMSIM42RIL implements CommandsInt
         rr = findAndRemoveRequestFromList(serial);
 
         if (rr == null) {
-            Log.w(LOG_TAG, "Unexpected solicited response! sn: "
+            Rlog.w(RILJ_LOG_TAG, "Unexpected solicited response! sn: "
                             + serial + " error: " + error);
-            return;
+            return null;
         }
 
         Object ret = null;
@@ -571,13 +450,15 @@ public class SamsungQualcommRIL extends QualcommMSIM42RIL implements CommandsInt
             case RIL_REQUEST_ACKNOWLEDGE_INCOMING_GSM_SMS_WITH_PDU: ret = responseVoid(p); break;
             case RIL_REQUEST_STK_SEND_ENVELOPE_WITH_STATUS: ret = responseICC_IO(p); break;
             case RIL_REQUEST_VOICE_RADIO_TECH: ret = responseInts(p); break;
+            case RIL_REQUEST_GET_CELL_INFO_LIST: ret = responseCellInfoList(p); break;
+            case RIL_REQUEST_SET_UNSOL_CELL_INFO_LIST_RATE: ret = responseVoid(p); break;
             default:
                 throw new RuntimeException("Unrecognized solicited response: " + rr.mRequest);
             //break;
             }} catch (Throwable tr) {
                 // Exceptions here usually mean invalid RIL responses
 
-                Log.w(LOG_TAG, rr.serialString() + "< "
+                Rlog.w(RILJ_LOG_TAG, rr.serialString() + "< "
                         + requestToString(rr.mRequest)
                         + " exception, possible invalid RIL response", tr);
 
@@ -585,9 +466,24 @@ public class SamsungQualcommRIL extends QualcommMSIM42RIL implements CommandsInt
                     AsyncResult.forMessage(rr.mResult, null, tr);
                     rr.mResult.sendToTarget();
                 }
-                rr.release();
-                return;
+                return rr;
             }
+        }
+
+        // Here and below fake RIL_UNSOL_RESPONSE_SIM_STATUS_CHANGED, see b/7255789.
+        // This is needed otherwise we don't automatically transition to the main lock
+        // screen when the pin or puk is entered incorrectly.
+        switch (rr.mRequest) {
+            case RIL_REQUEST_ENTER_SIM_PUK:
+            case RIL_REQUEST_ENTER_SIM_PUK2:
+                if (mIccStatusChangedRegistrants != null) {
+                    if (RILJ_LOGD) {
+                        riljLog("ON enter sim puk fakeSimStatusChanged: reg count="
+                                + mIccStatusChangedRegistrants.size());
+                    }
+                    mIccStatusChangedRegistrants.notifyRegistrants();
+                }
+                break;
         }
 
         if (error != 0) {
@@ -608,8 +504,7 @@ public class SamsungQualcommRIL extends QualcommMSIM42RIL implements CommandsInt
             }
 
             rr.onError(error, ret);
-            rr.release();
-            return;
+            return rr;
         }
 
         if (RILJ_LOGD) riljLog(rr.serialString() + "< " + requestToString(rr.mRequest)
@@ -620,62 +515,14 @@ public class SamsungQualcommRIL extends QualcommMSIM42RIL implements CommandsInt
             rr.mResult.sendToTarget();
         }
 
-        rr.release();
+        return rr;
     }
-
-
-    // CDMA FIXES, this fixes  bogus values in nv/sim on d2/jf/t0 cdma family
-    private Object
-    operatorCheck(Parcel p) {
-        String response[] = (String[])responseStrings(p);
-        for(int i=0; i<response.length; i++){
-            if (response[i]!= null){
-                if (response[i].equals("       Empty") || (response[i].equals("")&& i<2))
-                    response[i]=operator;
-                if (response[i].equals("31000")|| response[i].equals("11111") || response[i].equals("123456") || response[i].equals("31099") || (response[i].equals("")&& i>=2) )
-                        response[i]=homeOperator;
-            }
-        }
-        return response;
-    }
-    // handle exceptions
-    private Object
-    responseVoiceDataRegistrationState(Parcel p) {
-        String response[] = (String[])responseStrings(p);
-        if ( response.length>=10){
-            for(int i=6; i<=9; i++){
-                if (response[i]== null){
-                    response[i]=Integer.toString(Integer.MAX_VALUE);
-                } else {
-                    try {
-                        Integer.parseInt(response[i]);
-                    } catch(NumberFormatException e) {
-                        response[i]=Integer.toString(Integer.parseInt(response[i],16));
-                    }
-                }
-            }
-        }
-
-        return response;
-    }
-    // has no effect
-    // for debugging purposes , just generate out anything from response
-    public static String s(String a[]){
-        StringBuffer result = new StringBuffer();
-
-        for (int i = 0; i < a.length; i++) {
-            result.append( a[i] );
-            result.append(",");
-        }
-        return result.toString();
-    }
-    // end  of cdma fix
 
     // CDMA FIXES, this fixes  bogus values in nv/sim on d2/jf/t0 cdma family or bogus information from sim card
     private Object
     operatorCheck(Parcel p) {
         String response[] = (String[])responseStrings(p);
-        for(int i=0; i<3; i++){
+        for(int i=0; i<response.length; i++){
             if (response[i]!= null){
                 if (i<2){
                     if (response[i].equals("       Empty") || (response[i].equals("") && !isGSM)) {
@@ -694,10 +541,6 @@ public class SamsungQualcommRIL extends QualcommMSIM42RIL implements CommandsInt
                 } else if (response[i].equals("31000")|| response[i].equals("11111") || response[i].equals("123456") || response[i].equals("31099") || (response[i].equals("") && !isGSM)){
                         response[i]=homeOperator;
                 }
-                lastKnownOfGood[i]=response[i];
-            }else{
-                if(lastKnownOfGood[i]!=null)
-                    response[i]=lastKnownOfGood[i];
             }
         }
         return response;
