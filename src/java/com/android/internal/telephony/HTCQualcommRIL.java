@@ -197,7 +197,6 @@ public class HTCQualcommRIL extends QualcommMSIM42RIL implements CommandsInterfa
             case RIL_UNSOL_RESPONSE_DATA_NETWORK_STATE_CHANGED: ret = responseInts(p); break;
             case RIL_UNSOL_RIL_CONNECTED:
                 ret = responseInts(p);
-
                 if (RILJ_LOGD) unsljLogRet(response, ret);
 
                 // Initial conditions
