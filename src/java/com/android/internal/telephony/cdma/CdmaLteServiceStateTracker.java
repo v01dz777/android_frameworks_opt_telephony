@@ -537,8 +537,6 @@ public class CdmaLteServiceStateTracker extends CdmaServiceStateTracker {
         // check for concurrent voice and data capability
         if (mSS.getRilDataRadioTechnology() == ServiceState.RIL_RADIO_TECHNOLOGY_LTE) {
             return true;
-        } else if (SystemProperties.getBoolean(TelephonyProperties.PROPERTY_SVDO, false)) {
-            return true;
         } else {
             return mSS.getCssIndicator() == 1;
         }
