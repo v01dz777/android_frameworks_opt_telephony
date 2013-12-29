@@ -634,7 +634,6 @@ public class SamsungQualcommRIL extends QualcommMSIM42RIL implements CommandsInt
             result.append(",");
         }
         return result.toString();
->>>>>>> 6d82648... SamsungQualcommRIL: fix errors and replaces it with known values
     }
     // end  of cdma fix
 
