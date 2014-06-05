@@ -16,10 +16,6 @@
 
 package com.android.internal.telephony.sip;
 
-// BEGIN privacy additions
-import android.privacy.surrogate.PrivacySipPhone;
-//END privacy
-
 import com.android.internal.telephony.PhoneNotifier;
 
 import android.content.Context;
@@ -44,7 +40,7 @@ public class SipPhoneFactory {
             PhoneNotifier phoneNotifier) {
         try {
             SipProfile profile = new SipProfile.Builder(sipUri).build();
-            return new PrivacySipPhone(context, phoneNotifier, profile);
+            return new SipPhone(context, phoneNotifier, profile);
         } catch (ParseException e) {
             Rlog.w("SipPhoneFactory", "makePhone", e);
             return null;

@@ -79,14 +79,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
 
-//////////////////////////////////////////////////////////
-import android.os.ServiceManager;
-import android.privacy.IPrivacySettingsManager;
-import android.privacy.PrivacySettings;
-import android.privacy.PrivacySettingsManager;
-import java.util.Random;
-//////////////////////////////////////////////////////////
-
 /**
  * {@hide}
  */
@@ -98,11 +90,6 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
     GsmCellLocation mCellLoc;
     GsmCellLocation mNewCellLoc;
     int mPreferredNetworkType;
-
-    // BEGIN privacy additions
-    private Context mContext;
-    private PrivacySettingsManager pSetMan;
-    // END privacy
 
     private int mMaxDataCalls = 1;
     private int mNewMaxDataCalls = 1;
@@ -248,13 +235,7 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
         IntentFilter filter = new IntentFilter();
         filter.addAction(Intent.ACTION_LOCALE_CHANGED);
         phone.getContext().registerReceiver(mIntentReceiver, filter);
-        
-        //--------------------------------------------------------------------------
-        this.mContext = phone.getContext();
-        pSetMan = new PrivacySettingsManager(mContext, IPrivacySettingsManager.Stub.asInterface(ServiceManager.getService("privacy")));
-        //--------------------------------------------------------------------------
-        
-        
+
         // Gsm doesn't support OTASP so its not needed
         phone.notifyOtaspChanged(OTASP_NOT_NEEDED);
     }
@@ -366,23 +347,8 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
                             Rlog.w(LOG_TAG, "error parsing location: " + ex);
                         }
                     }
-                    // BEGIN privacy additions
-                    PrivacySettings settings = pSetMan.getSettings(mContext.getPackageName(), 0);
-                    if(pSetMan != null && settings != null && settings.getLocationNetworkSetting() == PrivacySettings.EMPTY){
-                    	//we will update with invalid cell location values
-                    	mCellLoc.setStateInvalid();
-                    	mPhone.notifyLocationChanged();
-                    }
-                    else if(pSetMan != null && settings != null && settings.getLocationNetworkSetting() == PrivacySettings.RANDOM){
-                    	Random values = new Random();
-                    	mCellLoc.setLacAndCid(values.nextInt(), values.nextInt());
-                        mPhone.notifyLocationChanged();
-                    }
-                    else{
-                    	mCellLoc.setLacAndCid(lac, cid);
-                        mPhone.notifyLocationChanged();
-                    }
-                     // END privacy
+                    mCellLoc.setLacAndCid(lac, cid);
+                    mPhone.notifyLocationChanged();
                 }
 
                 // Release any temporary cell lock, which could have been
@@ -648,7 +614,6 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
                         ar.exception);
             }
         } else try {
-        	PrivacySettings settings = pSetMan.getSettings(mContext.getPackageName(), 0);
             switch (what) {
                 case EVENT_POLL_STATE_REGISTRATION: {
                     states = (String[])ar.result;
@@ -701,22 +666,8 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
                     }
 
                     // LAC and CID are -1 if not avail
-                    // BEGIN privacy additions
-                    if(pSetMan != null && settings != null && settings.getLocationNetworkSetting() == PrivacySettings.EMPTY){
-                    	//we will update with invalid cell location values
-                    	mNewCellLoc.setStateInvalid();
-                        mNewCellLoc.setPsc(psc);
-                    }
-                    else if(pSetMan != null && settings != null && settings.getLocationNetworkSetting() == PrivacySettings.RANDOM){
-                    	Random values = new Random();
-                    	mNewCellLoc.setLacAndCid(values.nextInt(), values.nextInt());
-                        mNewCellLoc.setPsc(psc);
-                    }
-                    else{
-                    	mNewCellLoc.setLacAndCid(lac, cid);
-                        mNewCellLoc.setPsc(psc);
-                    }
-                    // END privacy
+                    mNewCellLoc.setLacAndCid(lac, cid);
+                    mNewCellLoc.setPsc(psc);
                     break;
                 }
 
@@ -762,14 +713,7 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
                     String opNames[] = (String[])ar.result;
 
                     if (opNames != null && opNames.length >= 3) {
-                        // BEGIN privacy additions
-                        if(pSetMan != null && settings != null && settings.getNetworkInfoSetting() != PrivacySettings.REAL){
-                        	mNewSS.setOperatorName ("", "", "");
-                        }
-                        else{
-                        	mNewSS.setOperatorName (opNames[0], opNames[1], opNames[2]);
-                        }
-                        // END privacy
+                         mNewSS.setOperatorName (opNames[0], opNames[1], opNames[2]);
                     }
                     break;
                 }
@@ -1004,7 +948,8 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
                     SystemProperties.get(TelephonyProperties.PROPERTY_OPERATOR_NUMERIC, "");
             operatorNumeric = mSS.getOperatorNumeric();
             mPhone.setSystemProperty(TelephonyProperties.PROPERTY_OPERATOR_NUMERIC, operatorNumeric);
-
+            updateCarrierMccMncConfiguration(operatorNumeric,
+                    prevOperatorNumeric, mPhone.getContext());
             if (operatorNumeric == null) {
                 if (DBG) log("operatorNumeric is null");
                 mPhone.setSystemProperty(TelephonyProperties.PROPERTY_OPERATOR_ISO_COUNTRY, "");
@@ -1154,7 +1099,7 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
         }
 
         if (hasLocationChanged) {
-            mPhone.notifyLocationChanged(); //we can notify, because all sensitive data has changed before @author CollegeDev
+            mPhone.notifyLocationChanged();
         }
 
         if (! isGprsConsistent(mSS.getDataRegState(), mSS.getVoiceRegState())) {
@@ -1426,12 +1371,14 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
         String[] numericArray = mPhone.getContext().getResources().getStringArray(
                     com.android.internal.R.array.config_operatorConsideredNonRoaming);
 
-        if (numericArray.length == 0 || operatorNumeric == null)
+        if (numericArray.length == 0 || operatorNumeric == null) {
             return false;
+        }
 
         for (String numeric : numericArray) {
-            if (operatorNumeric.startsWith(numeric))
+            if (operatorNumeric.startsWith(numeric)) {
                 return true;
+            }
         }
         return false;
     }
@@ -1441,14 +1388,14 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
         String[] numericArray = mPhone.getContext().getResources().getStringArray(
                     com.android.internal.R.array.config_sameNamedOperatorConsideredRoaming);
 
-        if (numericArray.length == 0 || operatorNumeric == null)
+        if (numericArray.length == 0 || operatorNumeric == null) {
             return false;
+        }
 
         for (String numeric : numericArray) {
-            if (operatorNumeric.startsWith(numeric))
+            if (operatorNumeric.startsWith(numeric)) {
                 return true;
-            else
-                return false;
+            }
         }
         return false;
     }
