@@ -343,19 +343,28 @@ public final class AdnRecordCache extends Handler implements IccConstants {
     public void
     requestLoadAllAdnLike (int efid, int extensionEf, String path, Message response) {
         ArrayList<Message> waiters;
-        ArrayList<AdnRecord> result;
+        ArrayList<AdnRecord> result = null;
 
         if (efid == EF_PBR) {
             ArrayList<AdnRecord> combinedResult = new ArrayList<AdnRecord>();
             //First Load from gloabl and then load from local PhoneBook.
             useLocalPb(false);
-            result = mUsimPhoneBookManager.loadEfFilesFromUsim();
-            if (null != result) combinedResult.addAll(result);
+            if (mUsimGlobalPhoneBookManager.isPhoneBookSupported()) {
+                result = mUsimPhoneBookManager.loadEfFilesFromUsim();
+                if (null != result) combinedResult.addAll(result);
+            }
             useLocalPb(true);
-            result = mUsimPhoneBookManager.loadEfFilesFromUsim();
-            if (null != result) combinedResult.addAll(result);
+            if (mUsimPhoneBookManager.isPhoneBookSupported()) {
+                result = mUsimPhoneBookManager.loadEfFilesFromUsim();
+                if (null != result) combinedResult.addAll(result);
+                if (!combinedResult.isEmpty()) result = combinedResult;
+            }
+            if (response != null) {
+                AsyncResult.forMessage(response).result = result;
+                response.sendToTarget();
+            }
 
-            if (!combinedResult.isEmpty()) result = combinedResult;
+            return;
         } else {
             result = getRecordsIfLoaded(efid);
         }

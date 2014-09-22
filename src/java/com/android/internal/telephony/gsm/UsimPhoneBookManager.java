@@ -67,6 +67,9 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
     private ArrayList<Integer>[] mAnrFlagsRecord;
     private ArrayList<Integer>[] mEmailFlagsRecord;
 
+    // Variable used to check if PhoneBook is supported
+    private boolean mIsPhoneBookSupported = true;
+
     // Variable used to save valid records' recordnum
     private Map<Integer, ArrayList<Integer>> mRecordNums;
 
@@ -125,6 +128,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
         // We assume its present, after the first read this is updated.
         // So we don't have to read from UICC if its not present on subsequent reads.
         mIsPbrPresent = true;
+        mIsPhoneBookSupported = true;
         mAdnCache = cache;
     }
 
@@ -146,7 +150,12 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
         mPbrFile = null;
         mAdnLengthList.clear();
         mIsPbrPresent = true;
+        mIsPhoneBookSupported = true;
         mRefreshCache = false;
+    }
+
+    public boolean isPhoneBookSupported() {
+        return mIsPhoneBookSupported;
     }
 
     public ArrayList<AdnRecord> loadEfFilesFromUsim() {
@@ -168,6 +177,8 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
             }
 
             if (mPbrFile == null) return null;
+
+            mIsPhoneBookSupported = true;
 
             int numRecs = mPbrFile.mFileIds.size();
 
@@ -898,6 +909,7 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
         if (records == null) {
             mPbrFile = null;
             mIsPbrPresent = false;
+            mIsPhoneBookSupported = false;
             return;
         }
         mPbrFile = new PbrFile(records);
@@ -949,6 +961,8 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                 ar = (AsyncResult) msg.obj;
                 if (ar.exception == null) {
                     createPbrFile((ArrayList<byte[]>) ar.result);
+                } else {
+                    mIsPhoneBookSupported = false;
                 }
                 synchronized (mLock) {
                     mLock.notify();
