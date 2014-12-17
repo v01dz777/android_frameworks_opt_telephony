@@ -1350,4 +1350,15 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     public void getModemActivityInfo(Message result) {
 
     }
+
+    @Override
+    public void unSetOnCatSendSmsResult(Handler h) { // Samsung STK
+
+    }
+
+    @Override
+    public void setOnCatSendSmsResult(Handler h, int what, Object obj) { // Samsung STK
+
+    }
+
 }
