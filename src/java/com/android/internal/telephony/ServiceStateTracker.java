@@ -68,6 +68,8 @@ public abstract class ServiceStateTracker extends Handler {
 
     protected PhoneBase mPhoneBase;
 
+    private TelephonyManager mTelephonyManager;
+
     protected boolean mVoiceCapable;
 
     public ServiceState mSS = new ServiceState();
@@ -289,8 +291,10 @@ public abstract class ServiceStateTracker extends Handler {
         mSubscriptionManager
             .addOnSubscriptionsChangedListener(mOnSubscriptionsChangedListener);
 
-        mPhoneBase.setSystemProperty(TelephonyProperties.PROPERTY_DATA_NETWORK_TYPE,
-            ServiceState.rilRadioTechnologyToString(ServiceState.RIL_RADIO_TECHNOLOGY_UNKNOWN));
+        mTelephonyManager = (TelephonyManager) mPhoneBase.getContext().
+                getSystemService(Context.TELEPHONY_SERVICE);
+        mTelephonyManager.setDataNetworkTypeForPhone(mPhoneBase.getPhoneId(),
+                ServiceState.RIL_RADIO_TECHNOLOGY_UNKNOWN);
         mCi.registerForImsNetworkStateChanged(this, EVENT_IMS_STATE_CHANGED, null);
     }
 
@@ -339,8 +343,7 @@ public abstract class ServiceStateTracker extends Handler {
         int rat = mSS.getRilDataRadioTechnology();
         int drs = mSS.getDataRegState();
         if (DBG) log("notifyDataRegStateRilRadioTechnologyChanged: drs=" + drs + " rat=" + rat);
-        mPhoneBase.setSystemProperty(TelephonyProperties.PROPERTY_DATA_NETWORK_TYPE,
-                ServiceState.rilRadioTechnologyToString(rat));
+        mTelephonyManager.setDataNetworkTypeForPhone(mPhoneBase.getPhoneId(), rat);
         mDataRegStateOrRatChangedRegistrants.notifyResult(new Pair<Integer, Integer>(drs, rat));
     }
 

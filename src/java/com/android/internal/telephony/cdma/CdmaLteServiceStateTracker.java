@@ -16,6 +16,7 @@
 
 package com.android.internal.telephony.cdma;
 
+import android.content.Context;
 import android.content.Intent;
 import com.android.internal.telephony.TelephonyProperties;
 import com.android.internal.telephony.MccTable;
@@ -457,13 +458,16 @@ public class CdmaLteServiceStateTracker extends CdmaServiceStateTracker {
 
         mNewSS.setStateOutOfService(); // clean slate for next time
 
+        TelephonyManager tm =
+                (TelephonyManager) mPhone.getContext().getSystemService(
+                 Context.TELEPHONY_SERVICE);
+
         if (hasVoiceRadioTechnologyChanged) {
             updatePhoneObject();
         }
 
         if (hasDataRadioTechnologyChanged) {
-            mPhone.setSystemProperty(TelephonyProperties.PROPERTY_DATA_NETWORK_TYPE,
-                    ServiceState.rilRadioTechnologyToString(mSS.getRilDataRadioTechnology()));
+            tm.setDataNetworkTypeForPhone(mPhone.getPhoneId(), mSS.getRilDataRadioTechnology());
 
             if (isIwlanFeatureAvailable()
                     && (ServiceState.RIL_RADIO_TECHNOLOGY_IWLAN
