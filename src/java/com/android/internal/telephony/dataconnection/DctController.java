@@ -1189,6 +1189,13 @@ public class DctController extends Handler {
                 return;
             }
 
+            if (SubscriptionController.getInstance().isSetDdsInProgress() &&
+                    !isNetworkRequestForInternet(networkRequest)) {
+                log("Set DDS in progress. Cannot handle request now");
+                mPendingReq.put(networkRequest.requestId, networkRequest);
+                return;
+            }
+
             if (currentDds != requestedSpecifier) {
                 log("This request would result in DDS switch");
                 log("Requested DDS switch to subId = " + requestedSpecifier);

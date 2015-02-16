@@ -341,7 +341,11 @@ public class DdsScheduler extends StateMachine {
                     NetworkRequest nr = (NetworkRequest)msg.obj;
                     Rlog.d(TAG, "EVENT_REMOVE_REQUEST" + nr);
                     removeRequest(nr);
-                    sendMessage(obtainMessage(DdsSchedulerAc.REQ_DDS_FREE, nr));
+                    if (SubscriptionController.getInstance().isSetDdsInProgress()) {
+                        Rlog.d(TAG, "Set DDS in progress.Request will be freed later.");
+                    } else {
+                        sendMessage(obtainMessage(DdsSchedulerAc.REQ_DDS_FREE, nr));
+                    }
                     break;
                 }
 
@@ -351,7 +355,8 @@ public class DdsScheduler extends StateMachine {
                     return HANDLED;
                 }
 
-                case DdsSchedulerAc.REQ_DDS_FREE: {
+                case DdsSchedulerAc.REQ_DDS_FREE:
+                case DdsSchedulerAc.EVENT_SET_DDS_DONE: {
                     Rlog.d(TAG, "REQ_DDS_FREE, currentState = " + getCurrentState().getName());
                     return HANDLED;
                 }
@@ -469,8 +474,10 @@ public class DdsScheduler extends StateMachine {
                     return HANDLED;
                 }
 
-                case DdsSchedulerAc.REQ_DDS_FREE: {
-                    Rlog.d(TAG, "REQ_DDS_FREE");
+                case DdsSchedulerAc.REQ_DDS_FREE:
+                case DdsSchedulerAc.EVENT_SET_DDS_DONE: {
+                    Rlog.d(TAG, (msg.what ==  DdsSchedulerAc.REQ_DDS_FREE) ? "REQ_DDS_FREE" :
+                            "EVENT_SET_DDS_DONE");
 
                     if(!acceptWaitingRequest()) {
                         Rlog.d(TAG, "Can't process next in this DDS");
@@ -555,8 +562,10 @@ public class DdsScheduler extends StateMachine {
                     return HANDLED;
                 }
 
-                case DdsSchedulerAc.REQ_DDS_FREE: {
-                    Rlog.d(TAG, "REQ_DDS_FREE");
+                case DdsSchedulerAc.REQ_DDS_FREE:
+                case DdsSchedulerAc.EVENT_SET_DDS_DONE: {
+                    Rlog.d(TAG, (msg.what ==  DdsSchedulerAc.REQ_DDS_FREE) ? "REQ_DDS_FREE" :
+                            "EVENT_SET_DDS_DONE");
                     if (!acceptWaitingRequest()) {
                         //No more requests for current sub. If there are few accepted requests
                         //for defaultDds then move to DdsReservedState so that on-demand PS

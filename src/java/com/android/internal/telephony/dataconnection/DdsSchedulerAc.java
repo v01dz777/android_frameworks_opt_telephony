@@ -50,6 +50,7 @@ public class DdsSchedulerAc extends AsyncChannel {
     public static final int EVENT_MODEM_DATA_CAPABILITY_UPDATE = BASE + 4;
     public static final int EVENT_ADD_REQUEST = BASE + 5;
     public static final int EVENT_REMOVE_REQUEST = BASE + 6;
+    public static final int EVENT_SET_DDS_DONE = BASE + 7;
 
     public DdsSchedulerAc() {
     }
@@ -62,5 +63,10 @@ public class DdsSchedulerAc extends AsyncChannel {
     public void freeDds(NetworkRequest req) {
         Rlog.d(TAG, "EVENT_REMOVE_REQUEST = " + req);
         sendMessage(EVENT_REMOVE_REQUEST, req);
+    }
+
+    public void notifySetDdsDone() {
+        Rlog.d(TAG, "notifySetDdsDone");
+        sendMessage(EVENT_SET_DDS_DONE);
     }
 }
