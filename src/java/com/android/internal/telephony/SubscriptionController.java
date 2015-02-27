@@ -858,10 +858,13 @@ public class SubscriptionController extends ISub.Stub {
                 SubscriptionManager.CONTENT_URI.getAuthority(), 0) == null ||
                 subIds == null ||
                 !SubscriptionManager.isValidSubscriptionId(subIds[0])) {
-            // No place to store this info, we are done.
-            // TODO: This can be removed once SubscriptionController is not running on devices
-            // that don't need it, such as TVs.
-            return false;
+                // No place to store this info. Notify registrants of the change anyway as they
+                // might retrieve the SPN/PLMN text from the SST sticky broadcast.
+                // TODO: This can be removed once SubscriptionController is not running on devices
+                // that don't need it, such as TVs.
+                if (DBG) logd("[setPlmnSpn] No valid subscription to store info");
+                notifySubscriptionInfoChanged();
+                return false;
         }
         String carrierText = "";
         if (showPlmn) {
@@ -872,13 +875,13 @@ public class SubscriptionController extends ISub.Stub {
                         com.android.internal.R.string.kg_text_message_separator).toString();
                 carrierText = new StringBuilder().append(carrierText).append(separator).append(spn)
                         .toString();
+                }
+            } else if (showSpn) {
+                carrierText = spn;
             }
-        } else if (showSpn) {
-            carrierText = spn;
-        }
-        for (int i = 0; i < subIds.length; i++) {
-            setCarrierText(carrierText, subIds[i]);
-        }
+            for (int i = 0; i < subIds.length; i++) {
+                setCarrierText(carrierText, subIds[i]);
+            }
         return true;
     }
 
