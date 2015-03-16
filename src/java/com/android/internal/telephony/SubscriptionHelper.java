@@ -172,7 +172,7 @@ class SubscriptionHelper extends Handler {
     }
 
     public boolean needSubActivationAfterRefresh(int slotId) {
-        return (mSubStatus[slotId] == SUB_INIT_STATE);
+        return (sNumPhones > 1  && mSubStatus[slotId] == SUB_INIT_STATE);
     }
 
     public void updateSubActivation(int[] simStatus, boolean isStackReadyEvent) {
