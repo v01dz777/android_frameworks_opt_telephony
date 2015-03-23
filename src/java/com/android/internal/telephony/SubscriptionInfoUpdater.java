@@ -395,7 +395,7 @@ public class SubscriptionInfoUpdater extends Handler {
                 number.put(SubscriptionManager.NUMBER, msisdn);
                 contentResolver.update(SubscriptionManager.CONTENT_URI, number,
                         SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID + "="
-                        + Long.toString(subId), null);
+                        + Integer.toString(subId), null);
             }
 
             SubscriptionInfo subInfo = mSubscriptionManager.getActiveSubscriptionInfo(subId);
@@ -421,7 +421,7 @@ public class SubscriptionInfoUpdater extends Handler {
                     mContext.getString(com.android.internal.R.string.unknownName));
             contentResolver.update(SubscriptionManager.CONTENT_URI, name,
                     SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID
-                    + "=" + Long.toString(subId), null);
+                    + "=" + Integer.toString(subId), null);
             logd("carrier name = " + simCarrierName);
 
         } else {
