@@ -1385,10 +1385,6 @@ public final class ImsPhoneCallTracker extends CallTracker {
             if (mPhone != null && msg != null) {
                 Toast.makeText(mPhone.getContext(), msg, Toast.LENGTH_SHORT).show();
             }
-        
-        @Override
-        public void onCallSessionTtyModeReceived(ImsCall call, int mode) {
-            mPhone.onTtyModeReceived(mode);
         }
     };
 
