@@ -2203,4 +2203,15 @@ public class GSMPhone extends PhoneBase {
     public void requestChangeCbPsw(String facility, String oldPwd, String newPwd, Message result) {
         mCi.changeBarringPassword(facility, oldPwd, newPwd, result);
     }
+
+    public boolean isUtEnabled() {
+        ImsPhone imsPhone = mImsPhone;
+        if (imsPhone != null) {
+            return imsPhone.isUtEnabled();
+        } else {
+            Rlog.d(LOG_TAG, "isUtEnabled: called for GSM");
+            return false;
+        }
+    }
+
 }
