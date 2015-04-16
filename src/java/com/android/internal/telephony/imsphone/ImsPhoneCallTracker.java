@@ -1613,6 +1613,7 @@ public final class ImsPhoneCallTracker extends CallTracker {
             // Make mIsSrvccCompleted flag to true after SRVCC complete.
             // After SRVCC complete sometimes SRV_STATUS_UPDATE come late.
             mIsSrvccCompleted = true;
+            mState = PhoneConstants.State.IDLE;
         }
     }
 
