@@ -629,8 +629,9 @@ public final class CdmaCallTracker extends CallTracker {
                         // find if the MT call is a new ring or unknown connection
                         newRinging = checkMtFindNewRinging(dc,i);
                         if (newRinging == null) {
+                            mConnections[i] = new CdmaConnection(mPhone.getContext(), dc, this, i);
                             unknownConnectionAppeared = true;
-                            newUnknown = conn;
+                            newUnknown = mConnections[i];
                         }
                         checkAndEnableDataCallAfterEmergencyCallDropped();
                     } else {
