@@ -237,6 +237,7 @@ public final class DcTracker extends DcTrackerBase {
         }
 
         mDataConnectionTracker = this;
+        registerForAllEvents();
         update();
         mApnObserver = new ApnChangeObserver();
         p.getContext().getContentResolver().registerContentObserver(
@@ -3242,7 +3243,6 @@ public final class DcTracker extends DcTrackerBase {
     public void update() {
         log("update sub = " + mPhone.getSubId());
         log("update(): Active DDS, register for all events now!");
-        registerForAllEvents();
         onUpdateIcc();
 
         mUserDataEnabled = Settings.Global.getInt(mPhone.getContext().getContentResolver(),
