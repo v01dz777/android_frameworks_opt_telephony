@@ -456,12 +456,14 @@ public abstract class PhoneBase extends Handler implements Phone {
         mUiccController.registerForIccChanged(this, EVENT_ICC_CHANGED, null);
 
         // Monitor IMS service
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(ImsManager.ACTION_IMS_SERVICE_UP);
-        filter.addAction(ImsManager.ACTION_IMS_SERVICE_DOWN);
-        mContext.registerReceiver(mImsIntentReceiver, filter);
+        if (getPhoneType() != PhoneConstants.PHONE_TYPE_SIP) {
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(ImsManager.ACTION_IMS_SERVICE_UP);
+            filter.addAction(ImsManager.ACTION_IMS_SERVICE_DOWN);
+            mContext.registerReceiver(mImsIntentReceiver, filter);
 
-        mCi.registerForSrvccStateChanged(this, EVENT_SRVCC_STATE_CHANGED, null);
+            mCi.registerForSrvccStateChanged(this, EVENT_SRVCC_STATE_CHANGED, null);
+        }
         mCi.setOnUnsolOemHookRaw(this, EVENT_UNSOL_OEM_HOOK_RAW, null);
         Rlog.d(LOG_TAG, "mOosIsDisconnect=" + mOosIsDisconnect);
     }
