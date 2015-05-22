@@ -735,7 +735,6 @@ public class DctController extends Handler {
                             EVENT_SET_DATA_ALLOW_TRUE_DONE, s);
                     Phone phone = mPhones[phoneId].getActivePhone();
 
-                    informDefaultDdsToPropServ(phoneId);
                     if (!isOnDemandDdsSwitchInProgress) {
                         informDefaultDdsToPropServ(phoneId);
                     } else {
