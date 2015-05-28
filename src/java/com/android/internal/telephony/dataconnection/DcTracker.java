@@ -204,7 +204,7 @@ public final class DcTracker extends DcTrackerBase {
             switch (msg.what) {
                 case EVENT_3GPP_RECORDS_LOADED:
                     log("EVENT_3GPP_RECORDS_LOADED");
-                    onSimRecordsLoaded();
+                    setAttachApn();
                     break;
             }
         }
@@ -1523,7 +1523,7 @@ public final class DcTracker extends DcTrackerBase {
      */
     private void onApnChanged() {
         if (DBG) log("onApnChanged: tryRestartDataConnections");
-        setInitialAttachApn(create3gppApnsList(), mSimRecords.get());
+        setAttachApn();
         tryRestartDataConnections(true, Phone.REASON_APN_CHANGED);
     }
 
@@ -2594,7 +2594,7 @@ public final class DcTracker extends DcTrackerBase {
             // TODO: What is the right behavior?
             //notifyNoData(DataConnection.FailCause.MISSING_UNKNOWN_APN);
         } else {
-            mPreferredApn = getPreferredApn();
+            mPreferredApn = getPreferredApn(mAllApnSettings);
             if (mPreferredApn != null && !mPreferredApn.numeric.equals(operator)) {
                 mPreferredApn = null;
                 setPreferredApn(-1);
@@ -2934,9 +2934,9 @@ public final class DcTracker extends DcTrackerBase {
         }
     }
 
-    private ApnSetting getPreferredApn() {
-        if (mAllApnSettings.isEmpty()) {
-            log("getPreferredApn: X not found mAllApnSettings.isEmpty");
+    private ApnSetting getPreferredApn(ArrayList<ApnSetting> apnList) {
+        if (apnList == null || apnList.isEmpty()) {
+            log("getPreferredApn: X not found apnList.isEmpty");
             return null;
         }
 
@@ -2958,7 +2958,7 @@ public final class DcTracker extends DcTrackerBase {
             int pos;
             cursor.moveToFirst();
             pos = cursor.getInt(cursor.getColumnIndexOrThrow(Telephony.Carriers._ID));
-            for(ApnSetting p : mAllApnSettings) {
+            for(ApnSetting p : apnList) {
                 log("getPreferredApn: apnSetting=" + p);
                 if (p.id == pos && p.canHandleType(mRequestedApnType)) {
                     log("getPreferredApn: X found apnSetting" + p);
@@ -3229,8 +3229,10 @@ public final class DcTracker extends DcTrackerBase {
         }
     }
 
-    private void onSimRecordsLoaded() {
-        setInitialAttachApn(create3gppApnsList(), mSimRecords.get());
+    private void setAttachApn() {
+        ArrayList<ApnSetting> apnList = create3gppApnsList();
+        ApnSetting preferApn = getPreferredApn(apnList);
+        setInitialAttachApn(apnList, preferApn, mSimRecords.get());
     }
 
     public void update() {

@@ -1799,13 +1799,14 @@ public abstract class DcTrackerBase extends Handler {
         startDataStallAlarm(DATA_STALL_NOT_SUSPECTED);
     }
 
-    protected void setInitialAttachApn(ArrayList <ApnSetting> apnList, IccRecords r) {
+    protected void setInitialAttachApn(ArrayList <ApnSetting> apnList, ApnSetting preferredApn,
+            IccRecords r) {
         ApnSetting iaApnSetting = null;
         ApnSetting defaultApnSetting = null;
         ApnSetting firstApnSetting = null;
         String operator = (r != null) ? r.getOperatorNumeric(): "";
 
-        log("setInitialApn: E mPreferredApn=" + mPreferredApn);
+        log("setInitialApn: E preferredApn=" + preferredApn);
 
         if (apnList != null && !apnList.isEmpty()) {
             firstApnSetting = apnList.get(0);
@@ -1831,7 +1832,7 @@ public abstract class DcTrackerBase extends Handler {
 
         // The priority of apn candidates from highest to lowest is:
         //   1) APN_TYPE_IA (Inital Attach)
-        //   2) mPreferredApn, i.e. the current preferred apn
+        //   2) preferredApn, i.e. the current preferred apn
         //   3) The first apn that than handle APN_TYPE_DEFAULT
         //   4) The first APN we can find.
 
@@ -1839,9 +1840,9 @@ public abstract class DcTrackerBase extends Handler {
         if (iaApnSetting != null) {
             if (DBG) log("setInitialAttachApn: using iaApnSetting");
             initialAttachApnSetting = iaApnSetting;
-        } else if (mPreferredApn != null && Objects.equals(mPreferredApn.numeric, operator)) {
-            if (DBG) log("setInitialAttachApn: using mPreferredApn");
-            initialAttachApnSetting = mPreferredApn;
+        } else if (preferredApn != null && Objects.equals(preferredApn.numeric, operator)) {
+            if (DBG) log("setInitialAttachApn: using preferredApn");
+            initialAttachApnSetting = preferredApn;
         } else if (defaultApnSetting != null) {
             if (DBG) log("setInitialAttachApn: using defaultApnSetting");
             initialAttachApnSetting = defaultApnSetting;
@@ -1862,7 +1863,7 @@ public abstract class DcTrackerBase extends Handler {
     }
 
     protected void setInitialAttachApn() {
-        setInitialAttachApn(mAllApnSettings, mIccRecords.get());
+        setInitialAttachApn(mAllApnSettings, mPreferredApn, mIccRecords.get());
     }
 
     protected void setDataProfilesAsNeeded() {
