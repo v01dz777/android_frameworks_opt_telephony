@@ -1101,4 +1101,16 @@ public abstract class ServiceStateTracker extends Handler {
     protected int getPhoneId() {
         return mPhoneBase.getPhoneId();
     }
+
+    /**
+     * {@hide}
+     */
+    public boolean isRatLte(int rat) {
+        if ((rat == ServiceState.RIL_RADIO_TECHNOLOGY_LTE)
+                || (rat == ServiceState.RIL_RADIO_TECHNOLOGY_LTE_CA)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
 }
