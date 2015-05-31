@@ -676,6 +676,17 @@ public class DctController extends Handler {
         dcTracker.setDataAllowed(false, null);
     }
 
+    protected void setupDataAfterDdsSwitchIfPossible() {
+        int defaultDds = mSubController.getDefaultDataSubId();
+        Rlog.d(LOG_TAG, "setupDataAfterDdsSwitchIfPossible on sub = " + defaultDds);
+        int phoneId = mSubController.getPhoneId(defaultDds);
+
+        Phone phone = mPhones[phoneId].getActivePhone();
+        DcTrackerBase dcTracker =((PhoneBase)phone).mDcTracker;
+
+        dcTracker.setupDataAfterDdsSwitchIfPossible();
+    }
+
     public void setOnDemandDataSubId(NetworkRequest n) {
         Rlog.d(LOG_TAG, "setDataAllowed for :" + n);
         mDdsSwitchSerializer.sendMessage(mDdsSwitchSerializer

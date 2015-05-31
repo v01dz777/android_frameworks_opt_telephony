@@ -869,6 +869,7 @@ public abstract class DcTrackerBase extends Handler {
     public abstract void setImsRegistrationState(boolean registered);
     protected abstract boolean mvnoMatches(IccRecords r, String mvno_type, String mvno_match_data);
     protected abstract boolean isPermanentFail(DcFailCause dcFailCause);
+    protected abstract void setupDataAfterDdsSwitchIfPossible();
 
     @Override
     public void handleMessage(Message msg) {

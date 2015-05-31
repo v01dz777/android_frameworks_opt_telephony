@@ -648,6 +648,7 @@ public class DdsScheduler extends StateMachine {
                     updateCurrentDds(null);
 
                     transitionTo(mDdsIdleState);
+                    mDctController.setupDataAfterDdsSwitchIfPossible();
                     return HANDLED;
                 }
 

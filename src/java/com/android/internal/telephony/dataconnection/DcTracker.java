@@ -853,6 +853,33 @@ public final class DcTracker extends DcTrackerBase {
         setupDataOnConnectableApns(Phone.REASON_DATA_ATTACHED);
     }
 
+    protected void setupDataAfterDdsSwitchIfPossible() {
+        if (DBG) log("setupDataAfterDdsSwitchIfPossible: Attached = " + mAttached.get());
+        if (mAttached.get() == true) {
+            for (ApnContext apnContext : mPrioritySortedApnContexts) {
+                if (apnContext.isConnectable()) {
+                    if (DBG) log("setupDataAfterDdsSwitchIfPossible: connectable apnContext "
+                            + apnContext);
+
+                    if (apnContext.getApnType().equals(PhoneConstants.APN_TYPE_DEFAULT)) {
+                        if(apnContext.getReconnectIntent() == null) {
+                            if (DBG) log("setupDataAfterDdsSwitchIfPossible: "
+                                    + "setupDataOnConnectableApns");
+                            /* We are attached, we have a connectable APN default apn
+                             * and reconnect timer is not running!!!
+                             * Give a try in setting up data call */
+                            setupDataOnConnectableApns("Ondemand-DDS-switch");
+                        } else {
+                            if (DBG) log("setupDataAfterDdsSwitchIfPossible:"
+                                    + "reconnect timer already running");
+
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     @Override
     protected boolean isDataAllowed() {
         final boolean internalDataEnabled;
