@@ -1095,7 +1095,9 @@ public abstract class ServiceStateTracker extends Handler {
     protected abstract void setRoamingType(ServiceState currentServiceState);
 
     protected String getHomeOperatorNumeric() {
-        return SystemProperties.get(TelephonyProperties.PROPERTY_ICC_OPERATOR_NUMERIC, "");
+        return ((TelephonyManager) mPhoneBase.getContext().
+                getSystemService(Context.TELEPHONY_SERVICE)).
+                getSimOperatorNumericForPhone(mPhoneBase.getPhoneId());
     }
 
     protected int getPhoneId() {
