@@ -276,11 +276,6 @@ public class IccCardProxy extends Handler implements IccCard {
                 if (!mInitialized) {
                     updateQuietMode();
                 }
-                // When the radio is off, if EVENT_ICC_CHANGED is received, the
-                // mExternalState will be updated. After the radio turns on, if
-                // EVENT_ICC_CHANGED is not received, the mExternalState will not be
-                // be restored. Therefore, updateExternalState when the radio turns on.
-                updateExternalState();
                 break;
             case EVENT_ICC_CHANGED:
                 mIsCardStatusAvailable = true;
