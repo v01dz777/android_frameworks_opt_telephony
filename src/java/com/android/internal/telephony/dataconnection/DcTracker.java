@@ -1689,6 +1689,7 @@ public final class DcTracker extends DcTrackerBase {
         String apnType = apnContext.getApnType();
 
         Intent intent = new Intent(INTENT_RECONNECT_ALARM + "." + apnType);
+        intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
         intent.putExtra(INTENT_RECONNECT_ALARM_EXTRA_REASON, apnContext.getReason());
         intent.putExtra(INTENT_RECONNECT_ALARM_EXTRA_TYPE, apnType);
 
@@ -1705,13 +1706,14 @@ public final class DcTracker extends DcTrackerBase {
         PendingIntent alarmIntent = PendingIntent.getBroadcast (mPhone.getContext(), 0,
                                         intent, PendingIntent.FLAG_UPDATE_CURRENT);
         apnContext.setReconnectIntent(alarmIntent);
-        mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP,
+        mAlarmManager.setExact(AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 SystemClock.elapsedRealtime() + delay, alarmIntent);
     }
 
     private void startAlarmForRestartTrySetup(int delay, ApnContext apnContext) {
         String apnType = apnContext.getApnType();
         Intent intent = new Intent(INTENT_RESTART_TRYSETUP_ALARM + "." + apnType);
+        intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
         intent.putExtra(INTENT_RESTART_TRYSETUP_ALARM_EXTRA_TYPE, apnType);
 
         if (DBG) {
@@ -1721,7 +1723,7 @@ public final class DcTracker extends DcTrackerBase {
         PendingIntent alarmIntent = PendingIntent.getBroadcast (mPhone.getContext(), 0,
                                         intent, PendingIntent.FLAG_UPDATE_CURRENT);
         apnContext.setReconnectIntent(alarmIntent);
-        mAlarmManager.set(AlarmManager.ELAPSED_REALTIME_WAKEUP,
+        mAlarmManager.setExact(AlarmManager.ELAPSED_REALTIME_WAKEUP,
                 SystemClock.elapsedRealtime() + delay, alarmIntent);
     }
 
