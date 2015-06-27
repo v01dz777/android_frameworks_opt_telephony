@@ -356,6 +356,7 @@ class SubscriptionHelper extends Handler {
         // Seems SSR happenned or RILD crashed, do not handle SIM change events
         if (!isRadioAvailable(slotId)) {
             logi(" proceedToHandleIccEvent, radio not available, slotId = " + slotId);
+            mSubStatus[slotId] = SUB_INIT_STATE;
             return false;
         }
         return true;
