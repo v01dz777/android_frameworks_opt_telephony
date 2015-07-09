@@ -21,6 +21,7 @@ package com.android.internal.telephony;
 import android.app.ActivityManagerNative;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Resources;
 import android.net.LinkProperties;
 import android.net.NetworkCapabilities;
 import android.os.AsyncResult;
@@ -179,7 +180,9 @@ public class PhoneProxy extends Handler implements Phone {
             // Check for a voice over lte replacement
             if ((newVoiceRadioTech == ServiceState.RIL_RADIO_TECHNOLOGY_LTE) ||
                     (newVoiceRadioTech == ServiceState.RIL_RADIO_TECHNOLOGY_UNKNOWN)) {
-                int volteReplacementRat = mActivePhone.getContext().getResources().getInteger(
+                Resources res = SubscriptionManager.getResourcesForSubId(
+                        mActivePhone.getContext(), getSubId());
+                int volteReplacementRat = res.getInteger(
                         com.android.internal.R.integer.config_volte_replacement_rat);
                 logd("phoneObjectUpdater: volteReplacementRat=" + volteReplacementRat);
                 if (volteReplacementRat != ServiceState.RIL_RADIO_TECHNOLOGY_UNKNOWN) {

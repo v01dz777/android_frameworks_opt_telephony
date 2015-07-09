@@ -18,6 +18,7 @@ package com.android.internal.telephony.cdma;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Resources;
 import com.android.internal.telephony.TelephonyProperties;
 import com.android.internal.telephony.MccTable;
 import com.android.internal.telephony.EventLogTags;
@@ -805,9 +806,11 @@ public class CdmaLteServiceStateTracker extends CdmaServiceStateTracker {
             // if replacement RAT is unknown
             // If there is a  real need to switch to LTE, then it will be done via
             // RIL_UNSOL_VOICE_RADIO_TECH_CHANGED from RIL.
-
-            int volteReplacementRat = mPhoneBase.getContext().getResources().getInteger(
+            Resources res = SubscriptionManager.getResourcesForSubId(
+                    mPhone.getContext(), mPhone.getSubId());
+            int volteReplacementRat = res.getInteger(
                     com.android.internal.R.integer.config_volte_replacement_rat);
+
             Rlog.d(LOG_TAG, "updatePhoneObject: volteReplacementRat=" + volteReplacementRat);
 
             if (isRatLte(voiceRat) &&
