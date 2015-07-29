@@ -1418,11 +1418,17 @@ public class SubscriptionController extends ISub.Stub {
         if (ar.exception == null) {
             setDataSubId(subId);
             reqStatus = PhoneConstants.SUCCESS;
-        }
-        mScheduler.updateCurrentDds(null);
-        broadcastDefaultDataSubIdChanged(subId);
+            mScheduler.updateCurrentDds(null);
+            broadcastDefaultDataSubIdChanged(subId);
 
-        updateAllDataConnectionTrackers();
+            updateAllDataConnectionTrackers();
+        } else {
+            // DDS switch failed. Make sure DDS is still
+            // intact on last known dds subscription.
+            int defaultDds = getDefaultDataSubId();
+            logd("DDS switch failed, enforce last dds = " + defaultDds);
+            setDefaultDataSubId(defaultDds);
+        }
     }
 
     public void setDefaultDataSubId(int subId) {

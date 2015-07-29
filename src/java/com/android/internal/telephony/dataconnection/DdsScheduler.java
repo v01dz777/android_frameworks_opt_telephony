@@ -612,7 +612,7 @@ public class DdsScheduler extends StateMachine {
                         Rlog.d(TAG, "Switch failed, move back to idle state");
                         //discard the request so that we can process other pending reqeusts
                         removeRequest(n);
-                        transitionTo(mDdsIdleState);
+                        transitionTo(mDdsAutoRevertState);
                     }
                     return HANDLED;
                 }
