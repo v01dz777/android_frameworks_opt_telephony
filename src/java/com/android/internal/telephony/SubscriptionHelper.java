@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2014-2015, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -29,7 +29,6 @@
  */
 
 package com.android.internal.telephony;
-
 
 import android.telephony.Rlog;
 import android.content.Context;
@@ -132,6 +131,8 @@ class SubscriptionHelper extends Handler {
 
     private static final int EVENT_SET_UICC_SUBSCRIPTION_DONE = 1;
     private static final int EVENT_REFRESH = 2;
+    private static final int EVENT_SET_NW_MODE_DONE = 3;
+    private static final int EVENT_GET_PREFERRED_NETWORK_TYPE = 4;
 
     public static final int SUB_SET_UICC_FAIL = -100;
     public static final int SUB_SIM_NOT_INSERTED = -99;
@@ -229,9 +230,57 @@ class SubscriptionHelper extends Handler {
                 logd("EVENT_REFRESH");
                 processSimRefresh((AsyncResult)msg.obj);
                 break;
+            case EVENT_SET_NW_MODE_DONE:
+                handleSetPrefNwModeDone(msg);
+                break;
+            case EVENT_GET_PREFERRED_NETWORK_TYPE:
+                handleGetPreferredNetworkTypeResponse(msg);
+                break;
            default:
            break;
         }
+    }
+
+    private void handleGetPreferredNetworkTypeResponse(Message msg) {
+        AsyncResult ar = (AsyncResult) msg.obj;
+        Integer phoneId = (Integer)ar.userObj;
+        if (ar.exception == null) {
+            int modemNetworkMode = ((int[])ar.result)[0];
+
+
+            //check that modemNetworkMode is from an accepted value
+            if ((modemNetworkMode >= Phone.NT_MODE_WCDMA_PREF) &&
+                    (modemNetworkMode <= Phone.NT_MODE_TD_SCDMA_LTE_CDMA_EVDO_GSM_WCDMA)) {
+                //update nwMode value to the DB
+                logd("Updating nw mode in DB for slot[" + phoneId+ "] with " + modemNetworkMode);
+                TelephonyManager.putIntAtIndex(mContext.getContentResolver(),
+                        android.provider.Settings.Global.PREFERRED_NETWORK_MODE,
+                        phoneId, modemNetworkMode);
+            } else {
+                loge("handleGetPreferredNetworkTypeResponse: InValid for slot : " + phoneId);
+            }
+        } else {
+            loge("handleGetPreferredNetworkTypeResponse: Failed for slot : "+ phoneId);
+        }
+    }
+
+
+
+    private void handleSetPrefNwModeDone(Message msg) {
+        AsyncResult ar = (AsyncResult) msg.obj;
+        if (ar.exception != null) {
+            logd("Failed to set preferred network mode as per simInfo Table");
+
+            for (int i=0; i < sNumPhones; i++ ) {
+                logd("Get nw mode from modem and set to DB for slot :" + i);
+                Message getNwModeMsg = Message.obtain(this, EVENT_GET_PREFERRED_NETWORK_TYPE,
+                    new Integer(i));
+                mCi[i].getPreferredNetworkType(getNwModeMsg);
+            }
+        } else {
+            logd("Success to set pref nw mode as per sim info table on a slot");
+        }
+
     }
 
     public boolean needSubActivationAfterRefresh(int slotId) {
@@ -279,8 +328,20 @@ class SubscriptionHelper extends Handler {
 
     public void updateNwMode() {
         updateNwModesInSubIdTable(false);
-        ModemBindingPolicyHandler.getInstance().updatePrefNwTypeIfRequired();
         mNwModeUpdated = true;
+        SubscriptionController subCtrlr = SubscriptionController.getInstance();
+        for (int i=0; i < sNumPhones; i++ ) {
+            int[] subIdList = subCtrlr.getSubId(i);
+            if (subIdList != null && subIdList[0] > 0) {
+                int nwModeinSubIdTable = subCtrlr.getNwMode(subIdList[0]);
+                logd("Updating Value in DB for slot[" + i + "] with " + nwModeinSubIdTable);
+                TelephonyManager.putIntAtIndex( mContext.getContentResolver(),
+                        android.provider.Settings.Global.PREFERRED_NETWORK_MODE,
+                        i, nwModeinSubIdTable);
+            }
+        }
+        Message msg = obtainMessage(EVENT_SET_NW_MODE_DONE);
+        ModemBindingPolicyHandler.getInstance().updatePrefNwTypeIfRequired(msg);
     }
 
     public void setUiccSubscription(int slotId, int subStatus) {
