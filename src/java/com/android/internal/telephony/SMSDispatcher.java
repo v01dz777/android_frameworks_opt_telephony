@@ -730,7 +730,8 @@ public abstract class SMSDispatcher extends Handler {
      *  raw pdu of the status report is in the extended data ("pdu").
      */
     protected abstract void sendData(String destAddr, String scAddr, int destPort, int origPort,
-            byte[] data, PendingIntent sentIntent, PendingIntent deliveryIntent);
+            byte[] data, PendingIntent sentIntent, PendingIntent deliveryIntent,
+            String callingPackage);
 
     /**
      * Send a text based SMS.
@@ -904,7 +905,7 @@ public abstract class SMSDispatcher extends Handler {
                 getNewSubmitPduTracker(destAddr, scAddr, parts.get(i), smsHeader, encoding,
                         sentIntent, deliveryIntent, (i == (msgCount - 1)), priority, isExpectMore,
                         validityPeriod, unsentPartCount, anyPartFailed,
-                        messageUri, fullMessageText);
+                        messageUri, fullMessageText, callingPkg);
         }
 
         if (parts == null || trackers == null || trackers.length == 0
@@ -937,7 +938,8 @@ public abstract class SMSDispatcher extends Handler {
             String message, SmsHeader smsHeader, int encoding,
             PendingIntent sentIntent, PendingIntent deliveryIntent, boolean lastPart, int priority,
             boolean isExpectMore, int validityPeriod, AtomicInteger unsentPartCount,
-            AtomicBoolean anyPartFailed, Uri messageUri, String fullMessageText);
+            AtomicBoolean anyPartFailed, Uri messageUri, String fullMessageText,
+            String callingPackage);
 
     /**
      * Send an SMS
@@ -1558,17 +1560,23 @@ public abstract class SMSDispatcher extends Handler {
     protected SmsTracker getSmsTracker(HashMap<String, Object> data, PendingIntent sentIntent,
             PendingIntent deliveryIntent, String format, AtomicInteger unsentPartCount,
             AtomicBoolean anyPartFailed, Uri messageUri, SmsHeader smsHeader,
-            boolean isExpectMore, String fullMessageText, boolean isText, int validityPeriod) {
+            boolean isExpectMore, String fullMessageText, boolean isText, int validityPeriod,
+            String callingPackage) {
+
         // Get calling app package name via UID from Binder call
         PackageManager pm = mContext.getPackageManager();
-        String[] packageNames = pm.getPackagesForUid(Binder.getCallingUid());
+        String callerPackageName = callingPackage;
+        if(callerPackageName == null) {
+            String[] packageNames = pm.getPackagesForUid(Binder.getCallingUid());
+            callerPackageName = packageNames[0];
+        }
 
         // Get package info via packagemanager
         PackageInfo appInfo = null;
-        if (packageNames != null && packageNames.length > 0) {
+        if (callerPackageName != null) {
             try {
                 // XXX this is lossy- apps can share a UID
-                appInfo = pm.getPackageInfo(packageNames[0], PackageManager.GET_SIGNATURES);
+                appInfo = pm.getPackageInfo(callerPackageName, PackageManager.GET_SIGNATURES);
             } catch (PackageManager.NameNotFoundException e) {
                 // error will be logged in sendRawPdu
             }
@@ -1583,18 +1591,18 @@ public abstract class SMSDispatcher extends Handler {
 
     protected SmsTracker getSmsTracker(HashMap<String, Object> data, PendingIntent sentIntent,
             PendingIntent deliveryIntent, String format, Uri messageUri, boolean isExpectMore,
-            String fullMessageText, boolean isText) {
+            String fullMessageText, boolean isText, String callingPackage) {
         return getSmsTracker(data, sentIntent, deliveryIntent, format, null/*unsentPartCount*/,
                 null/*anyPartFailed*/, messageUri, null/*smsHeader*/,
-                isExpectMore, fullMessageText, isText, -1);
+                isExpectMore, fullMessageText, isText, -1, callingPackage);
     }
 
     protected SmsTracker getSmsTracker(HashMap<String, Object> data, PendingIntent sentIntent,
             PendingIntent deliveryIntent, String format, Uri messageUri, boolean isExpectMore, 
-            String fullMessageText, boolean isText, int validityPeriod ) {
+            String fullMessageText, boolean isText, int validityPeriod, String callingPackage ) {
         return getSmsTracker(data, sentIntent, deliveryIntent, format, null/*unsentPartCount*/, 
                 null/*anyPartFailed*/, messageUri, null/*smsHeader*/, isExpectMore, 
-                fullMessageText, isText, validityPeriod);
+                fullMessageText, isText, validityPeriod, callingPackage);
     }
 
     protected HashMap<String, Object> getSmsTrackerMap(String destAddr, String scAddr,

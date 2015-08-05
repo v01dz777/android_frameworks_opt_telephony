@@ -163,14 +163,15 @@ public final class GsmSMSDispatcher extends SMSDispatcher {
     /** {@inheritDoc} */
     @Override
     protected void sendData(String destAddr, String scAddr, int destPort, int origPort,
-            byte[] data, PendingIntent sentIntent, PendingIntent deliveryIntent) {
+            byte[] data, PendingIntent sentIntent, PendingIntent deliveryIntent,
+            String callingPackage) {
         SmsMessage.SubmitPdu pdu = SmsMessage.getSubmitPdu(
                 scAddr, destAddr, destPort, origPort, data, (deliveryIntent != null));
         if (pdu != null) {
             HashMap map = getSmsTrackerMap(destAddr, scAddr, destPort, origPort, data, pdu);
             SmsTracker tracker = getSmsTracker(map, sentIntent, deliveryIntent, getFormat(),
                     null /*messageUri*/, false /*isExpectMore*/, null /*fullMessageText*/,
-                    false /*isText*/);
+                    false /*isText*/, callingPackage);
 
             String carrierPackage = getCarrierAppPackageName();
             if (carrierPackage != null) {
@@ -197,7 +198,7 @@ public final class GsmSMSDispatcher extends SMSDispatcher {
             HashMap map = getSmsTrackerMap(destAddr, scAddr, text, pdu);
             SmsTracker tracker = getSmsTracker(map, sentIntent, deliveryIntent, getFormat(),
                     messageUri, isExpectMore, text /*fullMessageText*/,
-                    true /*isText*/, validityPeriod);
+                    true /*isText*/, validityPeriod, callingPkg);
 
             String carrierPackage = getCarrierAppPackageName();
             if (carrierPackage != null) {
@@ -233,7 +234,7 @@ public final class GsmSMSDispatcher extends SMSDispatcher {
             PendingIntent sentIntent, PendingIntent deliveryIntent, boolean lastPart,
             int priority, boolean isExpectMore, int validityPeriod,
             AtomicInteger unsentPartCount, AtomicBoolean anyPartFailed, Uri messageUri,
-            String fullMessageText) {
+            String fullMessageText, String callingPackage) {
         SmsMessage.SubmitPdu pdu = SmsMessage.getSubmitPdu(scAddress, destinationAddress,
                 message, deliveryIntent != null, SmsHeader.toByteArray(smsHeader),
                 encoding, smsHeader.languageTable, smsHeader.languageShiftTable, validityPeriod);
@@ -243,7 +244,7 @@ public final class GsmSMSDispatcher extends SMSDispatcher {
             return getSmsTracker(map, sentIntent,
                     deliveryIntent, getFormat(), unsentPartCount, anyPartFailed, messageUri,
                     smsHeader, (!lastPart || isExpectMore),
-                    fullMessageText, true /*isText*/, validityPeriod);
+                    fullMessageText, true /*isText*/, validityPeriod, callingPackage);
         } else {
             Rlog.e(TAG, "GsmSMSDispatcher.sendNewSubmitPdu(): getSubmitPdu() returned null");
             return null;

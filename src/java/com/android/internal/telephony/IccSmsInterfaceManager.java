@@ -385,7 +385,8 @@ public class IccSmsInterfaceManager {
             return;
         }
         destAddr = filterDestAddress(destAddr);
-        mDispatcher.sendData(destAddr, scAddr, destPort, 0, data, sentIntent, deliveryIntent);
+        mDispatcher.sendData(destAddr, scAddr, destPort, 0, data, sentIntent, deliveryIntent,
+                callingPackage);
     }
 
     /**
@@ -432,7 +433,7 @@ public class IccSmsInterfaceManager {
         }
         destAddr = filterDestAddress(destAddr);
         mDispatcher.sendData(destAddr, scAddr, destPort, origPort,
-                data, sentIntent, deliveryIntent);
+                data, sentIntent, deliveryIntent, callingPackage);
     }
 
     /**
