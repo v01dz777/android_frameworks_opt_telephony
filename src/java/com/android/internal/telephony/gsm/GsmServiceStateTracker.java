@@ -74,6 +74,7 @@ import com.android.internal.telephony.uicc.IccCardApplicationStatus.AppState;
 import com.android.internal.telephony.uicc.IccRecords;
 import com.android.internal.telephony.uicc.SIMRecords;
 import com.android.internal.telephony.uicc.SpnOverride;
+import com.android.internal.telephony.uicc.PlmnOverride;
 import com.android.internal.telephony.uicc.UiccCard;
 import com.android.internal.telephony.uicc.UiccCardApplication;
 import com.android.internal.telephony.uicc.UiccController;
@@ -100,6 +101,7 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
     GsmCellLocation mCellLoc;
     GsmCellLocation mNewCellLoc;
     SpnOverride mSpnOverride;
+    PlmnOverride mPlmnOverride;
     int mPreferredNetworkType;
 
     private int mMaxDataCalls = 1;
@@ -221,6 +223,7 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
         mCellLoc = new GsmCellLocation();
         mNewCellLoc = new GsmCellLocation();
         mSpnOverride = new SpnOverride();
+        mPlmnOverride = new PlmnOverride();
 
         PowerManager powerManager =
                 (PowerManager)phone.getContext().getSystemService(Context.POWER_SERVICE);
@@ -864,6 +867,9 @@ final class GsmServiceStateTracker extends ServiceStateTracker {
                             if (mSpnOverride.containsCarrier(opNames[2])) {
                                 log("EVENT_POLL_STATE_OPERATOR: use spnOverride");
                                 strOperatorLong = mSpnOverride.getSpn(opNames[2]);
+                            } else if (mPlmnOverride.containsCarrier(opNames[2])) {
+                                log("EVENT_POLL_STATE_OPERATOR: use plmnOverride");
+                                strOperatorLong = mPlmnOverride.getPlmn(opNames[2]);
                             } else {
                                 log("EVENT_POLL_STATE_OPERATOR: use value from ril");
                                 strOperatorLong = opNames[0];
