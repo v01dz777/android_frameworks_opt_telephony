@@ -273,50 +273,27 @@ public class ModemBindingPolicyHandler extends Handler {
     * equal to value in DB, then update the DB value and send request to RIL.
     */
     public void updatePrefNwTypeIfRequired(Message response){
-        boolean updateRequired = false;
         syncPreferredNwModeFromDB();
-        SubscriptionController subCtrlr = SubscriptionController.getInstance();
-        for (int i=0; i < mNumPhones; i++ ) {
-            int[] subIdList = subCtrlr.getSubId(i);
-            if (subIdList != null && subIdList[0] > 0) {
-                int subId = subIdList[0];
-                if (!SubscriptionManager.isValidSubscriptionId(subId)) {
-                    mNwModeinSubIdTable[i] = RILConstants.NETWORK_MODE_GSM_ONLY;
-                } else {
-                    mNwModeinSubIdTable[i] = subCtrlr.getNwMode(subId);
-                }
-                if (mNwModeinSubIdTable[i] == SubscriptionManager.DEFAULT_NW_MODE){
-                    updateRequired = false;
-                    break;
-                }
-                if (mNwModeinSubIdTable[i] != mPrefNwMode[i]) {
-                    updateRequired = true;
-                }
-            }
+
+        //if binding is in progress return failure for this request
+        if (mIsSetPrefNwModeInProgress) {
+            loge("setPreferredNetworkType: In Progress:");
+            sendResponseToTarget(response, RILConstants.GENERIC_FAILURE);
+            return;
         }
-        logd("updatePrefNwTypeIfRequired: updateRequired : " + updateRequired);
 
-        if (updateRequired) {
-            //if binding is in progress return failure for this request
-            if (mIsSetPrefNwModeInProgress) {
-                loge("setPreferredNetworkType: In Progress:");
-                sendResponseToTarget(response, RILConstants.GENERIC_FAILURE);
-                return;
+        mIsSetPrefNwModeInProgress = true;
+
+        //If CrossBinding request is not accepted, i.e. return value is FAILURE
+        //send request directly to RIL, or else store the setpref Msg for later processing.
+        if (updateStackBindingIfRequired(false) == SUCCESS) {
+            mStoredResponse.put(0, response);
+        } else {
+            for (int i=0; i < mNumPhones; i++ ) {
+                mCi[i].setPreferredNetworkType(mNwModeinSubIdTable[i], response);
             }
-
-            mIsSetPrefNwModeInProgress = true;
-
-            //If CrossBinding request is not accepted, i.e. return value is FAILURE
-            //send request directly to RIL, or else store the setpref Msg for later processing.
-            if (updateStackBindingIfRequired(false) == SUCCESS) {
-                mStoredResponse.put(0, response);
-            } else {
-                for (int i=0; i < mNumPhones; i++ ) {
-                    mCi[i].setPreferredNetworkType(mNwModeinSubIdTable[i], response);
-                }
-                mIsSetPrefNwModeInProgress = false;
-            }
-       }
+            mIsSetPrefNwModeInProgress = false;
+        }
     }
 
     private void handleModemRatCapsAvailable() {

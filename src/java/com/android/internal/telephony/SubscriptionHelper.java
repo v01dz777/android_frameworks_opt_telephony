@@ -247,10 +247,8 @@ class SubscriptionHelper extends Handler {
         if (ar.exception == null) {
             int modemNetworkMode = ((int[])ar.result)[0];
 
-
             //check that modemNetworkMode is from an accepted value
-            if ((modemNetworkMode >= Phone.NT_MODE_WCDMA_PREF) &&
-                    (modemNetworkMode <= Phone.NT_MODE_TD_SCDMA_LTE_CDMA_EVDO_GSM_WCDMA)) {
+            if (isNwModeValid(modemNetworkMode)) {
                 //update nwMode value to the DB
                 logd("Updating nw mode in DB for slot[" + phoneId+ "] with " + modemNetworkMode);
                 TelephonyManager.putIntAtIndex(mContext.getContentResolver(),
@@ -264,7 +262,10 @@ class SubscriptionHelper extends Handler {
         }
     }
 
-
+    private boolean isNwModeValid(int nwMode) {
+        return (nwMode >= Phone.NT_MODE_WCDMA_PREF) &&
+                    (nwMode <= Phone.NT_MODE_TD_SCDMA_LTE_CDMA_EVDO_GSM_WCDMA);
+    }
 
     private void handleSetPrefNwModeDone(Message msg) {
         AsyncResult ar = (AsyncResult) msg.obj;
@@ -327,21 +328,53 @@ class SubscriptionHelper extends Handler {
     }
 
     public void updateNwMode() {
+        SubscriptionController subCtrlr = SubscriptionController.getInstance();
+        int[] prefNwModeInDB = new int[sNumPhones];
+        int[] nwModeinSubIdTable = new int[sNumPhones];
+        boolean updateRequired = false;
+
         updateNwModesInSubIdTable(false);
         mNwModeUpdated = true;
-        SubscriptionController subCtrlr = SubscriptionController.getInstance();
+
         for (int i=0; i < sNumPhones; i++ ) {
             int[] subIdList = subCtrlr.getSubId(i);
+            try {
+                prefNwModeInDB[i] = TelephonyManager.getIntAtIndex(mContext.getContentResolver(),
+                        android.provider.Settings.Global.PREFERRED_NETWORK_MODE, i);
+            } catch (SettingNotFoundException snfe) {
+                loge("updateNwMode: Could not find PREFERRED_NETWORK_MODE!!!");
+                prefNwModeInDB[i] = Phone.PREFERRED_NT_MODE;
+            }
+
             if (subIdList != null && subIdList[0] > 0) {
-                int nwModeinSubIdTable = subCtrlr.getNwMode(subIdList[0]);
-                logd("Updating Value in DB for slot[" + i + "] with " + nwModeinSubIdTable);
-                TelephonyManager.putIntAtIndex( mContext.getContentResolver(),
-                        android.provider.Settings.Global.PREFERRED_NETWORK_MODE,
-                        i, nwModeinSubIdTable);
+                int subId = subIdList[0];
+                if (!SubscriptionManager.isValidSubscriptionId(subId)) {
+                    nwModeinSubIdTable[i] = SubscriptionManager.DEFAULT_NW_MODE;
+                } else {
+                    nwModeinSubIdTable[i] = subCtrlr.getNwMode(subId);
+                }
+                if (nwModeinSubIdTable[i] == SubscriptionManager.DEFAULT_NW_MODE){
+                    updateRequired = false;
+                    break;
+                }
+                if (nwModeinSubIdTable[i] != prefNwModeInDB[i]
+                        && isNwModeValid(nwModeinSubIdTable[i])) {
+                    updateRequired = true;
+                }
             }
         }
-        Message msg = obtainMessage(EVENT_SET_NW_MODE_DONE);
-        ModemBindingPolicyHandler.getInstance().updatePrefNwTypeIfRequired(msg);
+        logd("updateNwMode: updateRequired in Modem: " + updateRequired);
+
+        if (updateRequired) {
+            for (int i=0; i < sNumPhones; i++ ) {
+                logd("Updating Value in DB for slot[" + i + "] with " + nwModeinSubIdTable[i]);
+                TelephonyManager.putIntAtIndex( mContext.getContentResolver(),
+                        android.provider.Settings.Global.PREFERRED_NETWORK_MODE,
+                        i, nwModeinSubIdTable[i]);
+            }
+            Message msg = obtainMessage(EVENT_SET_NW_MODE_DONE);
+            ModemBindingPolicyHandler.getInstance().updatePrefNwTypeIfRequired(msg);
+        }
     }
 
     public void setUiccSubscription(int slotId, int subStatus) {
