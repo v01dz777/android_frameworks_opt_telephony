@@ -1079,6 +1079,10 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                                 adnRecIndex)).indexOf(efid);
                     if (efidIndex == -1) {
                         log("wrong efid index:" + efid );
+                        mSuccess = false;
+                        synchronized (mLock) {
+                            mLock.notify();
+                        }
                         return;
                     }
 
@@ -1142,6 +1146,10 @@ public class UsimPhoneBookManager extends Handler implements IccConstants {
                     efidIndex = mPbrFile.mAnrFileIds.get(getPbrIndexBy(adnRecIndex)).indexOf(efid);
                     if (efidIndex == -1) {
                         log("wrong efid index:" + efid );
+                        mSuccess = false;
+                        synchronized (mLock) {
+                            mLock.notify();
+                        }
                         return;
                     }
                     actualRecNumber = recordNumber +
