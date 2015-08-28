@@ -320,7 +320,7 @@ public class UiccController extends Handler {
             mUiccCards[index].onRefresh(refreshResponse);
         }
         // The card status could have changed. Get the latest state
-        mCis[index].getIccCardStatus(obtainMessage(EVENT_GET_ICC_STATUS_DONE));
+        mCis[index].getIccCardStatus(obtainMessage(EVENT_GET_ICC_STATUS_DONE, index));
     }
 
     public static IccRefreshResponse
