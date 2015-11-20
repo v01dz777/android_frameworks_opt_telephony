@@ -2709,6 +2709,30 @@ public final class Telephony {
         public static final String USER_VISIBLE = "user_visible";
 
         /**
+         * <P>Type: INTEGER (boolean)</P>
+         * @hide
+         */
+        public static final String READ_ONLY = "read_only";
+
+        /**
+         * <P>Type: TEXT</P>
+         * @hide
+         */
+        public static final String PPP_NUMBER =  "ppp_number";
+
+        /**
+         * <P>Type: TEXT</P>
+         * @hide
+         */
+        public static final String LOCALIZED_NAME = "localized_name";
+
+        /**
+         * <P>Type: TEXT</P>
+         * @hide
+         */
+        public static final String VISIT_AREA = "visit_area";
+
+        /**
          * Following are possible values for the EDITED field
          * @hide
          */
