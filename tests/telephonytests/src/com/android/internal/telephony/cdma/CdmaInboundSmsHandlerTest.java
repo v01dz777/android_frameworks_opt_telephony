@@ -210,7 +210,7 @@ public class CdmaInboundSmsHandlerTest extends TelephonyTest {
     @MediumTest
     public void testNewSmsFromBlockedNumber_noBroadcastsSent() {
         String blockedNumber = "123456789";
-        doReturn(blockedNumber).when(mInboundSmsTracker).getDisplayAddress();
+        doReturn(blockedNumber).when(mInboundSmsTracker).getAddress();
         mFakeBlockedNumberContentProvider.mBlockedNumbers.add(blockedNumber);
 
         transitionFromStartupToIdle();

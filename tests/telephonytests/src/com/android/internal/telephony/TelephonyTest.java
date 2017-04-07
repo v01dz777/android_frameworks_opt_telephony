@@ -329,11 +329,10 @@ public abstract class TelephonyTest {
                 .makeWspTypeDecoder(any(byte[].class));
         doReturn(mInboundSmsTracker).when(mTelephonyComponentFactory)
                 .makeInboundSmsTracker(any(byte[].class), anyLong(), anyInt(), anyBoolean(),
-                        anyBoolean(), anyString(), anyString(), anyString());
+                        anyBoolean(), anyString(), anyString());
         doReturn(mInboundSmsTracker).when(mTelephonyComponentFactory)
                 .makeInboundSmsTracker(any(byte[].class), anyLong(), anyInt(), anyBoolean(),
-                        anyString(), anyString(), anyInt(), anyInt(), anyInt(), anyBoolean(),
-                        anyString());
+                        anyString(), anyInt(), anyInt(), anyInt(), anyBoolean(), anyString());
         doReturn(mInboundSmsTracker).when(mTelephonyComponentFactory)
                 .makeInboundSmsTracker(any(Cursor.class), anyBoolean());
         doReturn(mImsCT).when(mTelephonyComponentFactory)
