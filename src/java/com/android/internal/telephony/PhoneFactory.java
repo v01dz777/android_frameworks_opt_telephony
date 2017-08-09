@@ -129,6 +129,19 @@ public class PhoneFactory {
                 }
 
                 sPhoneNotifier = new DefaultPhoneNotifier();
+                TelephonyComponentFactory telephonyComponentFactory
+                    = TelephonyComponentFactory.getInstance();
+
+                // Get preferred network mode
+                int preferredNetworkMode = RILConstants.PREFERRED_NETWORK_MODE;
+                if (preferredNetworkMode < RILConstants.NETWORK_MODE_TDSCDMA_ONLY) {
+                    if (TelephonyManager.getLteOnCdmaModeStatic() == PhoneConstants.LTE_ON_CDMA_TRUE) {
+                        preferredNetworkMode = Phone.NT_MODE_GLOBAL;
+                    }
+                    if (TelephonyManager.getLteOnGsmModeStatic() != 0) {
+                        preferredNetworkMode = Phone.NT_MODE_LTE_GSM_WCDMA;
+                    }
+                }
 
                 // Get preferred network mode
                 int preferredNetworkMode = RILConstants.PREFERRED_NETWORK_MODE;
@@ -177,8 +190,8 @@ public class PhoneFactory {
                     }
                 }
                 Rlog.i(LOG_TAG, "Creating SubscriptionController");
-                SubscriptionController.init(context, sCommandsInterfaces);
-
+                telephonyComponentFactory.initSubscriptionController(
+                        context, sCommandsInterfaces);
                 // Instantiate UiccController so that all other classes can just
                 // call getInstance()
                 sUiccController = UiccController.make(context, sCommandsInterfaces);
@@ -187,15 +200,15 @@ public class PhoneFactory {
                     Phone phone = null;
                     int phoneType = TelephonyManager.getPhoneType(networkModes[i]);
                     if (phoneType == PhoneConstants.PHONE_TYPE_GSM) {
-                        phone = new GsmCdmaPhone(context,
+                        phone = telephonyComponentFactory.makePhone(context,
                                 sCommandsInterfaces[i], sPhoneNotifier, i,
                                 PhoneConstants.PHONE_TYPE_GSM,
-                                TelephonyComponentFactory.getInstance());
+                                telephonyComponentFactory);
                     } else if (phoneType == PhoneConstants.PHONE_TYPE_CDMA) {
-                        phone = new GsmCdmaPhone(context,
+                        phone = telephonyComponentFactory.makePhone(context,
                                 sCommandsInterfaces[i], sPhoneNotifier, i,
-                                PhoneConstants.PHONE_TYPE_CDMA_LTE,
-                                TelephonyComponentFactory.getInstance());
+                                PhoneConstants.PHONE_TYPE_CDMA,
+                                telephonyComponentFactory);
                     }
                     Rlog.i(LOG_TAG, "Creating Phone with type = " + phoneType + " sub = " + i);
 
@@ -224,8 +237,8 @@ public class PhoneFactory {
                 sMadeDefaults = true;
 
                 Rlog.i(LOG_TAG, "Creating SubInfoRecordUpdater ");
-                sSubInfoRecordUpdater = new SubscriptionInfoUpdater(context,
-                        sPhones, sCommandsInterfaces);
+                sSubInfoRecordUpdater = telephonyComponentFactory.makeSubscriptionInfoUpdater(
+                        context, sPhones, sCommandsInterfaces);
                 SubscriptionController.getInstance().updatePhonesAvailability(sPhones);
 
                 // Start monitoring after defaults have been made.
@@ -233,6 +246,13 @@ public class PhoneFactory {
                 // because ImsService might need it when it is being opened.
                 for (int i = 0; i < numPhones; i++) {
                     sPhones[i].startMonitoringImsService();
+                    // Get users NW type, let it override if its not the default NW mode (-1)
+                    int userNwType = SubscriptionController.getInstance().getUserNwMode(
+                            sPhones[i].getSubId());
+                    if (userNwType != SubscriptionManager.DEFAULT_NW_MODE
+                            && userNwType != networkModes[i]) {
+                        sPhones[i].setPreferredNetworkType(userNwType, null);
+                    }
                 }
 
                 ITelephonyRegistry tr = ITelephonyRegistry.Stub.asInterface(
@@ -241,7 +261,8 @@ public class PhoneFactory {
 
                 sSubscriptionMonitor = new SubscriptionMonitor(tr, sContext, sc, numPhones);
 
-                sPhoneSwitcher = new PhoneSwitcher(MAX_ACTIVE_PHONES, numPhones,
+                sPhoneSwitcher = telephonyComponentFactory.
+                        makePhoneSwitcher (MAX_ACTIVE_PHONES, numPhones,
                         sContext, sc, Looper.myLooper(), tr, sCommandsInterfaces,
                         sPhones);
 
@@ -254,6 +275,9 @@ public class PhoneFactory {
                             sPhoneSwitcher, sc, sSubscriptionMonitor, Looper.myLooper(),
                             sContext, i, sPhones[i].mDcTracker);
                 }
+
+                telephonyComponentFactory.makeExtTelephonyClasses(
+                        context, sPhones, sCommandsInterfaces);
             }
         }
     }
@@ -331,6 +355,14 @@ public class PhoneFactory {
         int networkType = android.provider.Settings.Global.getInt(context.getContentResolver(),
                 android.provider.Settings.Global.PREFERRED_NETWORK_MODE + phoneSubId,
                 RILConstants.PREFERRED_NETWORK_MODE);
+
+        // Get users NW type, let it override if its not the default NW mode (-1)
+        int userNwType = SubscriptionController.getInstance().getUserNwMode(phoneSubId);
+        if (userNwType != SubscriptionManager.DEFAULT_NW_MODE && userNwType != networkType) {
+            Rlog.d(LOG_TAG, "calculatePreferredNetworkType: overriding for usernw mode " +
+                    "phoneSubId = " + phoneSubId + " networkType = " + networkType);
+            networkType = userNwType;
+        }
         Rlog.d(LOG_TAG, "calculatePreferredNetworkType: phoneSubId = " + phoneSubId +
                 " networkType = " + networkType);
         return networkType;

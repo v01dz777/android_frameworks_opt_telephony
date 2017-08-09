@@ -28,7 +28,9 @@ import android.net.Uri;
 import android.os.Binder;
 import android.os.RemoteException;
 import android.os.ServiceManager;
+import android.os.SystemProperties;
 import android.os.UserHandle;
+import android.provider.BaseColumns;
 import android.provider.Settings;
 import android.telephony.RadioAccessFamily;
 import android.telephony.Rlog;
@@ -39,6 +41,7 @@ import android.text.TextUtils;
 import android.text.format.Time;
 import android.util.Log;
 import java.util.Objects;
+import com.android.internal.telephony.RIL;
 import com.android.internal.telephony.IccCardConstants.State;
 
 import java.io.FileDescriptor;
@@ -73,8 +76,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class SubscriptionController extends ISub.Stub {
     static final String LOG_TAG = "SubscriptionController";
-    static final boolean DBG = true;
-    static final boolean VDBG = false;
+    protected static final boolean DBG = true;
+    protected static final boolean VDBG = false;
     static final int MAX_LOCAL_LOG_LINES = 500; // TODO: Reduce to 100 when 17678050 is fixed
     private ScLocalLog mLocalLog = new ScLocalLog(MAX_LOCAL_LOG_LINES);
 
@@ -119,19 +122,22 @@ public class SubscriptionController extends ISub.Stub {
     protected final Object mLock = new Object();
 
     /** The singleton instance. */
-    private static SubscriptionController sInstance = null;
+    protected static SubscriptionController sInstance = null;
     protected static Phone[] sPhones;
+    private static CommandsInterface[] sCommandsInterfaces;
     protected Context mContext;
     protected TelephonyManager mTelephonyManager;
     protected CallManager mCM;
 
     private AppOpsManager mAppOps;
 
+    private int mUserPreferredSmsSubId = SubscriptionManager.INVALID_SUBSCRIPTION_ID;
+
     // FIXME: Does not allow for multiple subs in a slot and change to SparseArray
     private static Map<Integer, Integer> sSlotIdxToSubId =
             new ConcurrentHashMap<Integer, Integer>();
-    private static int mDefaultFallbackSubId = SubscriptionManager.INVALID_SUBSCRIPTION_ID;
-    private static int mDefaultPhoneId = SubscriptionManager.DEFAULT_PHONE_INDEX;
+    protected static int mDefaultFallbackSubId = SubscriptionManager.INVALID_SUBSCRIPTION_ID;
+    protected static int mDefaultPhoneId = SubscriptionManager.DEFAULT_PHONE_INDEX;
 
     private int[] colorArr;
 
@@ -150,6 +156,7 @@ public class SubscriptionController extends ISub.Stub {
         synchronized (SubscriptionController.class) {
             if (sInstance == null) {
                 sInstance = new SubscriptionController(c);
+                sCommandsInterfaces = ci;
             } else {
                 Log.wtf(LOG_TAG, "init() called multiple times!  sInstance = " + sInstance);
             }
@@ -226,7 +233,7 @@ public class SubscriptionController extends ISub.Stub {
                 callingPackage) == AppOpsManager.MODE_ALLOWED;
     }
 
-    private void enforceModifyPhoneState(String message) {
+    protected void enforceModifyPhoneState(String message) {
         mContext.enforceCallingOrSelfPermission(
                 android.Manifest.permission.MODIFY_PHONE_STATE, message);
     }
@@ -274,28 +281,29 @@ public class SubscriptionController extends ISub.Stub {
                 SubscriptionManager.CARRIER_NAME));
         int nameSource = cursor.getInt(cursor.getColumnIndexOrThrow(
                 SubscriptionManager.NAME_SOURCE));
-        int iconTint = cursor.getInt(cursor.getColumnIndexOrThrow(
-                SubscriptionManager.COLOR));
+        int iconTint = getIconTint(cursor);
         String number = cursor.getString(cursor.getColumnIndexOrThrow(
                 SubscriptionManager.NUMBER));
         int dataRoaming = cursor.getInt(cursor.getColumnIndexOrThrow(
                 SubscriptionManager.DATA_ROAMING));
         // Get the blank bitmap for this SubInfoRecord
-        Bitmap iconBitmap = BitmapFactory.decodeResource(mContext.getResources(),
-                com.android.internal.R.drawable.ic_sim_card_multi_24px_clr);
+        Bitmap iconBitmap = getIconBitmap(cursor);
         int mcc = cursor.getInt(cursor.getColumnIndexOrThrow(
                 SubscriptionManager.MCC));
         int mnc = cursor.getInt(cursor.getColumnIndexOrThrow(
                 SubscriptionManager.MNC));
         // FIXME: consider stick this into database too
         String countryIso = getSubscriptionCountryIso(id);
+        int userNwMode = cursor.getInt(cursor.getColumnIndexOrThrow(
+                SubscriptionManager.USER_NETWORK_MODE));
 
         if (VDBG) {
             String iccIdToPrint = SubscriptionInfo.givePrintableIccid(iccId);
             logd("[getSubInfoRecord] id:" + id + " iccid:" + iccIdToPrint + " simSlotIndex:"
                     + simSlotIndex + " displayName:" + displayName + " nameSource:" + nameSource
                     + " iconTint:" + iconTint + " dataRoaming:" + dataRoaming
-                    + " mcc:" + mcc + " mnc:" + mnc + " countIso:" + countryIso);
+                    + " mcc:" + mcc + " mnc:" + mnc + " countIso:" + countryIso
+                    + " userNwMode:" + userNwMode);
         }
 
         // If line1number has been set to a different number, use it instead.
@@ -304,7 +312,8 @@ public class SubscriptionController extends ISub.Stub {
             number = line1Number;
         }
         return new SubscriptionInfo(id, iccId, simSlotIndex, displayName, carrierName,
-                nameSource, iconTint, number, dataRoaming, iconBitmap, mcc, mnc, countryIso);
+                nameSource, iconTint, number, dataRoaming, iconBitmap, mcc, mnc,
+                countryIso, userNwMode);
     }
 
     /**
@@ -319,6 +328,28 @@ public class SubscriptionController extends ISub.Stub {
             return "";
         }
         return mTelephonyManager.getSimCountryIsoForPhone(phoneId);
+    }
+
+    /**
+     * Return iconBitmap for SubInfoRecord
+     * @param cursor
+     * @return the iconBitmap
+     */
+    protected Bitmap getIconBitmap(Cursor cursor) {
+        Bitmap iconBitmap = BitmapFactory.decodeResource(mContext.getResources(),
+                com.android.internal.R.drawable.ic_sim_card_multi_24px_clr);
+        return iconBitmap;
+    }
+
+    /**
+     * Return iconTint for SubInfoRecord
+     * @param cursor
+     * @return the iconTint
+     */
+    protected int getIconTint(Cursor cursor) {
+        int iconTint = cursor.getInt(cursor.getColumnIndexOrThrow(
+                SubscriptionManager.COLOR));
+        return iconTint;
     }
 
     /**
@@ -761,7 +792,7 @@ public class SubscriptionController extends ISub.Stub {
 
                             // Set the default sub if not set or if single sim device
                             if (!SubscriptionManager.isValidSubscriptionId(defaultSubId)
-                                    || subIdCountMax == 1) {
+                                    || subIdCountMax == 1 || (!isActiveSubId(defaultSubId))) {
                                 setDefaultFallbackSubId(subId);
                             }
                             // If single sim device, set this subscription as the default for everything
@@ -782,10 +813,15 @@ public class SubscriptionController extends ISub.Stub {
                             if (phoneId < 0 || phoneId >= TelephonyManager.getDefault()
                                     .getPhoneCount()) {
                                 Rlog.i(LOG_TAG, "Subscription is invalid. Set default to " + subId);
+                                mUserPreferredSmsSubId = getDefaultSmsSubId();
                                 setDefaultSmsSubId(subId);
                                 PhoneFactory.setSMSPromptEnabled(subIdCountMax > 1);
+                            } else if (subId == mUserPreferredSmsSubId) {
+                                Rlog.i(LOG_TAG, "SMS subscription was different than user choice");
+                                setDefaultSmsSubId(subId);
+                                mUserPreferredSmsSubId =
+                                        SubscriptionManager.INVALID_SUBSCRIPTION_ID;
                             }
-
                         } else {
                             if (DBG) {
                                 logdl("[addSubInfoRecord] currentSubId != null"
@@ -799,6 +835,12 @@ public class SubscriptionController extends ISub.Stub {
                 if (cursor != null) {
                     cursor.close();
                 }
+            }
+
+            // Reset user choice for defaultSmsSubId in case only one Sim is inserted
+            if (sSlotIdxToSubId.size() == 1) {
+                Rlog.i(LOG_TAG, "Only one SIM found, resetting user preferred SMS sub");
+                mUserPreferredSmsSubId = SubscriptionManager.INVALID_SUBSCRIPTION_ID;
             }
 
             // Set Display name after sub id is set above so as to get valid simCarrierName
@@ -1254,7 +1296,7 @@ public class SubscriptionController extends ISub.Stub {
 
     }
 
-    private int[] getDummySubIds(int slotIdx) {
+    protected int[] getDummySubIds(int slotIdx) {
         // FIXME: Remove notion of Dummy SUBSCRIPTION_ID.
         // I tested this returning null as no one appears to care,
         // but no connection came up on sprout with two sims.
@@ -1300,21 +1342,21 @@ public class SubscriptionController extends ISub.Stub {
         }
     }
 
-    private void logvl(String msg) {
+    protected void logvl(String msg) {
         logv(msg);
         mLocalLog.log(msg);
     }
 
-    private void logv(String msg) {
+    protected void logv(String msg) {
         Rlog.v(LOG_TAG, msg);
     }
 
-    private void logdl(String msg) {
+    protected void logdl(String msg) {
         logd(msg);
         mLocalLog.log(msg);
     }
 
-    private static void slogd(String msg) {
+    protected static void slogd(String msg) {
         Rlog.d(LOG_TAG, msg);
     }
 
@@ -1322,7 +1364,7 @@ public class SubscriptionController extends ISub.Stub {
         Rlog.d(LOG_TAG, msg);
     }
 
-    private void logel(String msg) {
+    protected void logel(String msg) {
         loge(msg);
         mLocalLog.log(msg);
     }
@@ -1425,6 +1467,8 @@ public class SubscriptionController extends ISub.Stub {
     @Override
     public void setDefaultDataSubId(int subId) {
         enforceModifyPhoneState("setDefaultDataSubId");
+        String flexMapSupportType =
+                SystemProperties.get("persist.radio.flexmap_type", "dds");
 
         if (subId == SubscriptionManager.DEFAULT_SUBSCRIPTION_ID) {
             throw new RuntimeException("setDefaultDataSubId called with DEFAULT_SUB_ID");
@@ -1432,12 +1476,15 @@ public class SubscriptionController extends ISub.Stub {
 
         ProxyController proxyController = ProxyController.getInstance();
         int len = sPhones.length;
-        logdl("[setDefaultDataSubId] num phones=" + len + ", subId=" + subId);
+        logdl("[setDefaultDataSubId] num phones=" + len + ", subId=" +
+                subId + " dds flex map = " + flexMapSupportType);
 
-        if (SubscriptionManager.isValidSubscriptionId(subId)) {
+        // Initiate flex map process only if the flexmap support type is "dds".
+        if (SubscriptionManager.isValidSubscriptionId(subId) && flexMapSupportType.equals("dds")) {
             // Only re-map modems if the new default data sub is valid
             RadioAccessFamily[] rafs = new RadioAccessFamily[len];
             boolean atLeastOneMatch = false;
+            int slotId = PhoneConstants.DEFAULT_CARD_INDEX;
             for (int phoneId = 0; phoneId < len; phoneId++) {
                 Phone phone = sPhones[phoneId];
                 int raf;
@@ -1446,6 +1493,7 @@ public class SubscriptionController extends ISub.Stub {
                     // TODO Handle the general case of N modems and M subscriptions.
                     raf = proxyController.getMaxRafSupported();
                     atLeastOneMatch = true;
+                    slotId = phoneId;
                 } else {
                     // TODO Handle the general case of N modems and M subscriptions.
                     raf = proxyController.getMinRafSupported();
@@ -1455,6 +1503,9 @@ public class SubscriptionController extends ISub.Stub {
             }
             if (atLeastOneMatch) {
                 proxyController.setRadioCapability(rafs);
+                if (needsSim2gsmOnly()) {
+                     updateDataSubNetworkType(slotId, subId);
+                }
             } else {
                 if (DBG) logdl("[setDefaultDataSubId] no valid subId's found - not updating.");
             }
@@ -1466,6 +1517,20 @@ public class SubscriptionController extends ISub.Stub {
         Settings.Global.putInt(mContext.getContentResolver(),
                 Settings.Global.MULTI_SIM_DATA_CALL_SUBSCRIPTION, subId);
         broadcastDefaultDataSubIdChanged(subId);
+    }
+
+    private void updateDataSubNetworkType(int slotId, int subId) {
+        SubscriptionInfoUpdater subscriptionInfoUpdater = PhoneFactory.getSubscriptionInfoUpdater();
+        if (subscriptionInfoUpdater != null) {
+            subscriptionInfoUpdater.setDefaultDataSubNetworkType(slotId, subId);
+        }
+    }
+
+    private boolean needsSim2gsmOnly() {
+        if (sCommandsInterfaces != null && sCommandsInterfaces[0] instanceof RIL) {
+            return ((RIL) sCommandsInterfaces[0]).needsOldRilFeature("sim2gsmonly");
+        }
+        return false;
     }
 
     private void updateAllDataConnectionTrackers() {
@@ -1491,7 +1556,7 @@ public class SubscriptionController extends ISub.Stub {
      * sub is set as default subId. If two or more  sub's are active
      * the first sub is set as default subscription
      */
-    private void setDefaultFallbackSubId(int subId) {
+    protected void setDefaultFallbackSubId(int subId) {
         if (subId == SubscriptionManager.DEFAULT_SUBSCRIPTION_ID) {
             throw new RuntimeException("setDefaultSubId called with DEFAULT_SUB_ID");
         }
@@ -1551,7 +1616,7 @@ public class SubscriptionController extends ISub.Stub {
         }
     }
 
-    private boolean shouldDefaultBeCleared(List<SubscriptionInfo> records, int subId) {
+    protected boolean shouldDefaultBeCleared(List<SubscriptionInfo> records, int subId) {
         if (DBG) logdl("[shouldDefaultBeCleared: subId] " + subId);
         if (records == null) {
             if (DBG) logdl("[shouldDefaultBeCleared] return true no records subId=" + subId);
@@ -1758,6 +1823,26 @@ public class SubscriptionController extends ISub.Stub {
         Binder.restoreCallingIdentity(token);
     }
 
+    /* {@hide} */
+    public void setUserNwMode(int subId, int nwMode) {
+        logd("setUserNwMode, nwMode: " + nwMode + " subId: " + subId);
+        ContentValues value = new ContentValues(1);
+        value.put(SubscriptionManager.USER_NETWORK_MODE, nwMode);
+        mContext.getContentResolver().update(SubscriptionManager.CONTENT_URI,
+                value, BaseColumns._ID + "=" + Integer.toString(subId), null);
+    }
+
+    /* {@hide} */
+    public int getUserNwMode(int subId) {
+        SubscriptionInfo subInfo = getActiveSubscriptionInfo(subId, mContext.getOpPackageName());
+        if (subInfo != null)  {
+            return subInfo.mUserNwMode;
+        } else {
+            loge("getUserNwMode: invalid subId = " + subId);
+            return SubscriptionManager.DEFAULT_NW_MODE;
+        }
+    }
+
     /**
      * Store properties associated with SubscriptionInfo in database
      * @param subId Subscription Id of Subscription
@@ -1814,7 +1899,7 @@ public class SubscriptionController extends ISub.Stub {
         return resultValue;
     }
 
-    private static void printStackTrace(String msg) {
+    protected static void printStackTrace(String msg) {
         RuntimeException re = new RuntimeException();
         slogd("StackTrace - " + msg);
         StackTraceElement[] st = re.getStackTrace();

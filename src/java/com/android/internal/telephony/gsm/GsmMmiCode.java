@@ -30,6 +30,8 @@ import android.text.BidiFormatter;
 import android.text.TextDirectionHeuristics;
 import android.text.TextUtils;
 import android.telephony.Rlog;
+import android.util.Log;
+import android.widget.Toast;
 
 import static com.android.internal.telephony.CommandsInterface.*;
 
@@ -101,6 +103,8 @@ public final class GsmMmiCode extends Handler implements MmiCode {
     static final String SC_PIN2         = "042";
     static final String SC_PUK          = "05";
     static final String SC_PUK2         = "052";
+
+    static final int SINGLE_DIGIT_DIALED =    1;
 
     //***** Event Constants
 
@@ -1116,8 +1120,20 @@ public final class GsmMmiCode extends Handler implements MmiCode {
 
                 if (ar.exception != null) {
                     mState = State.FAILED;
-                    mMessage = getErrorMessage(ar);
-
+                    // suppress error pop-up for single dialed digits
+                    if (mDialingNumber != null &&
+                                mDialingNumber.length() == SINGLE_DIGIT_DIALED) {
+                        Log.w(
+                            LOG_TAG,
+                            mContext.getText(com.android.internal.R.string.mmiError).toString()
+                            );
+                            Toast.makeText(
+                                mContext,
+                                mContext.getText(com.android.internal.R.string.mmiError).toString(),
+                                Toast.LENGTH_SHORT).show();
+                    } else {
+                        mMessage = getErrorMessage(ar);
+                    }
                     mPhone.onMMIDone(this);
                 }
 

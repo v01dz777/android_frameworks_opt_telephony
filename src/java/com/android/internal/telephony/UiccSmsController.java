@@ -155,6 +155,19 @@ public class UiccSmsController extends ISms.Stub {
         }
     }
 
+    public void sendTextForSubscriberWithOptions(int subId, String callingPackage,
+            String destAddr, String scAddr, String parts, PendingIntent sentIntents,
+            PendingIntent deliveryIntents, int priority, boolean isExpectMore,
+            int validityPeriod) {
+        IccSmsInterfaceManager iccSmsIntMgr = getIccSmsInterfaceManager(subId);
+        if (iccSmsIntMgr != null ) {
+            iccSmsIntMgr.sendTextWithOptions(callingPackage, destAddr, scAddr, parts, sentIntents,
+                    deliveryIntents, priority, isExpectMore, validityPeriod);
+        } else {
+            Rlog.e(LOG_TAG,"sendTextWithOptions iccSmsIntMgr is null for" +
+                          " Subscription: " + subId);
+        }
+    }
     public void sendMultipartText(String callingPackage, String destAddr, String scAddr,
             List<String> parts, List<PendingIntent> sentIntents,
             List<PendingIntent> deliveryIntents) throws android.os.RemoteException {
@@ -176,6 +189,20 @@ public class UiccSmsController extends ISms.Stub {
             Rlog.e(LOG_TAG,"sendMultipartTextForSubscriber iccSmsIntMgr is null for" +
                           " Subscription: " + subId);
             sendErrorInPendingIntents(sentIntents, SmsManager.RESULT_ERROR_GENERIC_FAILURE);
+        }
+    }
+
+    public void sendMultipartTextForSubscriberWithOptions(int subId, String callingPackage,
+            String destAddr, String scAddr, List<String> parts, List<PendingIntent> sentIntents,
+            List<PendingIntent> deliveryIntents, int priority, boolean isExpectMore,
+            int validityPeriod) {
+        IccSmsInterfaceManager iccSmsIntMgr = getIccSmsInterfaceManager(subId);
+        if (iccSmsIntMgr != null ) {
+            iccSmsIntMgr.sendMultipartTextWithOptions(callingPackage, destAddr, scAddr, parts,
+                    sentIntents, deliveryIntents, priority, isExpectMore, validityPeriod);
+        } else {
+            Rlog.e(LOG_TAG,"sendMultipartTextWithOptions iccSmsIntMgr is null for" +
+                          " Subscription: " + subId);
         }
     }
 
@@ -265,6 +292,14 @@ public class UiccSmsController extends ISms.Stub {
     @Override
     public boolean isSmsSimPickActivityNeeded(int subId) {
         final Context context = ActivityThread.currentApplication().getApplicationContext();
+
+        boolean canCurrentAppHandleAlwaysAsk = SmsApplication.canSmsAppHandleAlwaysAsk(context);
+        if (!isSMSPromptEnabled() && canCurrentAppHandleAlwaysAsk) {
+            Rlog.d(LOG_TAG, "isSmsSimPickActivityNeeded: false, sms prompt disabled.");
+            // user knows best
+            return false;
+        }
+
         TelephonyManager telephonyManager =
                 (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
         List<SubscriptionInfo> subInfoList;
@@ -292,7 +327,7 @@ public class UiccSmsController extends ISms.Stub {
             }
         }
 
-        return false;
+        return !canCurrentAppHandleAlwaysAsk;
     }
 
     @Override
@@ -411,6 +446,22 @@ public class UiccSmsController extends ISms.Stub {
     private void sendErrorInPendingIntents(List<PendingIntent> intents, int errorCode) {
         for (PendingIntent intent : intents) {
             sendErrorInPendingIntent(intent, errorCode);
+        }
+    }
+
+    /**
+     * Get the capacity count of sms on Icc card.
+     **/
+    @Override
+    public int getSmsCapacityOnIccForSubscriber(int subId)
+            throws android.os.RemoteException {
+       IccSmsInterfaceManager iccSmsIntMgr = getIccSmsInterfaceManager(subId);
+
+        if (iccSmsIntMgr != null ) {
+            return iccSmsIntMgr.getSmsCapacityOnIcc();
+        } else {
+            Rlog.e(LOG_TAG, "iccSmsIntMgr is null for " + " subId: " + subId);
+            return -1;
         }
     }
 }

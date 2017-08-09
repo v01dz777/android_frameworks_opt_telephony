@@ -26,6 +26,7 @@ import com.android.internal.telephony.UUSInfo;
 import com.android.internal.telephony.cdma.CdmaSmsBroadcastConfigInfo;
 import com.android.internal.telephony.dataconnection.DataProfile;
 import com.android.internal.telephony.gsm.SmsBroadcastConfigInfo;
+import com.android.internal.telephony.uicc.SimPhoneBookAdnRecord;
 
 import java.util.List;
 
@@ -1359,7 +1360,17 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     }
 
     @Override
+    public void iccOpenLogicalChannel(String AID, byte p2, Message response) {
+
+    }
+
+    @Override
     public void setAllowedCarriers(List<CarrierIdentifier> carriers, Message result) {
+
+    }
+
+    @Override
+    public void getAtr(Message response) {
 
     }
 
@@ -1377,6 +1388,34 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     }
 
     @Override
+    public void getAdnRecord(Message result){
+
+    }
+
+    @Override
+    public void updateAdnRecord(SimPhoneBookAdnRecord adnRecordInfo, Message result){
+
+    }
+
+    @Override
+    public void registerForAdnInitDone(Handler h, int what, Object obj){
+
+    }
+
+    @Override
+    public void unregisterForAdnInitDone(Handler h){
+
+    }
+
+    public void registerForAdnRecordsInfo(Handler h, int what, Object obj){
+
+    }
+
+    public void unregisterForAdnRecordsInfo(Handler h){
+
+    }
+
+    @Override
     public void unSetOnCatSendSmsResult(Handler h) { // Samsung STK
 
     }
@@ -1385,4 +1424,5 @@ public class SimulatedCommandsVerifier implements CommandsInterface {
     public void setOnCatSendSmsResult(Handler h, int what, Object obj) { // Samsung STK
 
     }
+
 }
