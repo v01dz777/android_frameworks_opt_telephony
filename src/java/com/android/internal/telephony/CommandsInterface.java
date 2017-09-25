@@ -1898,7 +1898,7 @@ public interface CommandsInterface {
      * @param appIndex
      *          Application index in the card.
      * @param activate
-     *          Whether to activate or deactivate the subscription
+     *          Whether to activate or deactivate the subscription.
      * @param result
      *          Callback message contains the information of SUCCESS/FAILURE.
      */
